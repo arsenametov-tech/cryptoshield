@@ -21,7 +21,10 @@ import Animated, {
   withSequence,
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 import { colors, spacing, borderRadius, typography } from '@/constants/theme';
+import { StorageService } from '@/services/storage';
+import { NewellAI } from '@fastshot/ai';
 
 const { width } = Dimensions.get('window');
 const RADAR_SIZE = width * 0.6;
@@ -53,9 +56,12 @@ export default function Dashboard() {
   const [contractAddress, setContractAddress] = useState('');
   const [websiteUrl, setWebsiteUrl] = useState('');
   const [isScanning, setIsScanning] = useState(false);
+  const [securityTip, setSecurityTip] = useState<string>('');
+  const [isLoadingTip, setIsLoadingTip] = useState(false);
 
   const rotation = useSharedValue(0);
   const radarScale = useSharedValue(1);
+  const scanButtonPulse = useSharedValue(1);
 
   useEffect(() => {
     rotation.value = withRepeat(
@@ -66,7 +72,50 @@ export default function Dashboard() {
       -1,
       false
     );
-  }, [rotation]);
+
+    // Pulsing animation for scan button
+    scanButtonPulse.value = withRepeat(
+      withSequence(
+        withTiming(1.05, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
+        withTiming(1, { duration: 1500, easing: Easing.inOut(Easing.ease) })
+      ),
+      -1,
+      false
+    );
+
+    loadSecurityTip();
+  }, [rotation, scanButtonPulse]);
+
+  const loadSecurityTip = async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const cached = await StorageService.getSecurityTip();
+
+      // Check if we have a cached tip from today
+      if (cached && cached.date === today) {
+        setSecurityTip(cached.tip);
+        return;
+      }
+
+      // Generate new tip using Newell AI
+      setIsLoadingTip(true);
+      const ai = new NewellAI();
+
+      const response = await ai.text.generate({
+        prompt: 'Generate a short, practical crypto security tip (max 100 words). Focus on topics like phishing, rug pulls, smart contract risks, wallet security, or social engineering. Make it actionable and easy to understand for crypto users.',
+        temperature: 0.8,
+      });
+
+      const tip = response.text || 'Always verify contract addresses before transactions and never share your private keys.';
+      setSecurityTip(tip);
+      await StorageService.saveSecurityTip(tip);
+    } catch (error) {
+      console.error('Error loading security tip:', error);
+      setSecurityTip('Always verify contract addresses before transactions and never share your private keys.');
+    } finally {
+      setIsLoadingTip(false);
+    }
+  };
 
   const handleScan = async () => {
     if (!contractAddress.trim() && !websiteUrl.trim()) {
@@ -114,6 +163,12 @@ export default function Dashboard() {
     };
   });
 
+  const scanButtonAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ scale: scanButtonPulse.value }],
+    };
+  });
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'safe':
@@ -152,7 +207,10 @@ export default function Dashboard() {
             Crypto<Text style={styles.headerTitleAccent}>shield</Text>
           </Text>
         </View>
-        <TouchableOpacity style={styles.settingsButton}>
+        <TouchableOpacity
+          style={styles.settingsButton}
+          onPress={() => router.push('/settings')}
+        >
           <Ionicons name="settings-outline" size={24} color={colors.text} />
         </TouchableOpacity>
       </View>
@@ -193,15 +251,17 @@ export default function Dashboard() {
           </Animated.View>
 
           {/* Tap to Scan */}
-          <TouchableOpacity
-            style={styles.scanButton}
-            onPress={handleScan}
-            disabled={isScanning || (!contractAddress.trim() && !websiteUrl.trim())}
-          >
-            <Text style={styles.scanButtonText}>
-              {isScanning ? 'SCANNING...' : 'TAP TO SCAN'}
-            </Text>
-          </TouchableOpacity>
+          <Animated.View style={scanButtonAnimatedStyle}>
+            <TouchableOpacity
+              style={styles.scanButton}
+              onPress={handleScan}
+              disabled={isScanning || (!contractAddress.trim() && !websiteUrl.trim())}
+            >
+              <Text style={styles.scanButtonText}>
+                {isScanning ? 'SCANNING...' : 'TAP TO SCAN'}
+              </Text>
+            </TouchableOpacity>
+          </Animated.View>
         </View>
 
         {/* Input Fields */}
@@ -232,6 +292,36 @@ export default function Dashboard() {
               keyboardType="url"
             />
           </View>
+        </View>
+
+        {/* Security Tip of the Day */}
+        <View style={styles.tipSection}>
+          <Text style={styles.sectionTitle}>Security Tip of the Day</Text>
+
+          <BlurView intensity={20} tint="dark" style={styles.tipCard}>
+            <LinearGradient
+              colors={[`${colors.primary}15`, 'transparent']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.tipGradient}
+            >
+              <View style={styles.tipHeader}>
+                <View style={styles.tipIconContainer}>
+                  <Ionicons name="bulb" size={24} color={colors.primary} />
+                </View>
+                <Text style={styles.tipLabel}>Daily Tip</Text>
+              </View>
+
+              {isLoadingTip ? (
+                <View style={styles.tipLoadingContainer}>
+                  <ActivityIndicator size="small" color={colors.primary} />
+                  <Text style={styles.tipLoadingText}>Loading today&apos;s tip...</Text>
+                </View>
+              ) : (
+                <Text style={styles.tipText}>{securityTip}</Text>
+              )}
+            </LinearGradient>
+          </BlurView>
         </View>
 
         {/* Recent Checks */}
@@ -381,6 +471,55 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     fontSize: typography.fontSize.md,
     color: colors.text,
+  },
+  tipSection: {
+    marginBottom: spacing.xl,
+  },
+  tipCard: {
+    borderRadius: borderRadius.lg,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  tipGradient: {
+    padding: spacing.lg,
+  },
+  tipHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+    gap: spacing.sm,
+  },
+  tipIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: `${colors.primary}22`,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  tipLabel: {
+    fontSize: typography.fontSize.md,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.primary,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  tipLoadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+  },
+  tipLoadingText: {
+    fontSize: typography.fontSize.sm,
+    color: colors.textSecondary,
+    fontStyle: 'italic',
+  },
+  tipText: {
+    fontSize: typography.fontSize.md,
+    color: colors.text,
+    lineHeight: 22,
   },
   recentSection: {
     marginTop: spacing.md,

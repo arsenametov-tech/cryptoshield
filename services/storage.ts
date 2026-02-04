@@ -11,7 +11,16 @@ export interface ScanHistoryItem {
   type: 'contract' | 'website';
 }
 
+export interface UserPreferences {
+  dailyNotifications: boolean;
+  securityAlerts: boolean;
+  userName?: string;
+  lastTipDate?: string;
+}
+
 const STORAGE_KEY = '@cryptoshield_scan_history';
+const PREFERENCES_KEY = '@cryptoshield_preferences';
+const SECURITY_TIP_KEY = '@cryptoshield_security_tip';
 
 export const StorageService = {
   async saveScan(scan: Omit<ScanHistoryItem, 'id' | 'timestamp'>): Promise<void> {
@@ -60,6 +69,54 @@ export const StorageService = {
     } catch (error) {
       console.error('Error getting scan by id:', error);
       return null;
+    }
+  },
+
+  // User Preferences
+  async getPreferences(): Promise<UserPreferences> {
+    try {
+      const data = await AsyncStorage.getItem(PREFERENCES_KEY);
+      return data ? JSON.parse(data) : {
+        dailyNotifications: true,
+        securityAlerts: true,
+      };
+    } catch (error) {
+      console.error('Error getting preferences:', error);
+      return {
+        dailyNotifications: true,
+        securityAlerts: true,
+      };
+    }
+  },
+
+  async savePreferences(preferences: UserPreferences): Promise<void> {
+    try {
+      await AsyncStorage.setItem(PREFERENCES_KEY, JSON.stringify(preferences));
+    } catch (error) {
+      console.error('Error saving preferences:', error);
+    }
+  },
+
+  // Security Tip Cache
+  async getSecurityTip(): Promise<{ tip: string; date: string } | null> {
+    try {
+      const data = await AsyncStorage.getItem(SECURITY_TIP_KEY);
+      return data ? JSON.parse(data) : null;
+    } catch (error) {
+      console.error('Error getting security tip:', error);
+      return null;
+    }
+  },
+
+  async saveSecurityTip(tip: string): Promise<void> {
+    try {
+      const data = {
+        tip,
+        date: new Date().toISOString().split('T')[0], // YYYY-MM-DD
+      };
+      await AsyncStorage.setItem(SECURITY_TIP_KEY, JSON.stringify(data));
+    } catch (error) {
+      console.error('Error saving security tip:', error);
     }
   },
 };
