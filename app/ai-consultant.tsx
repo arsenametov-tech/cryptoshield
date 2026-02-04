@@ -81,13 +81,14 @@ export default function AIConsultant() {
     setMessages((prev) => [...prev, userMessage]);
     setInputText('');
 
-    // Build conversation context
-    const conversationHistory = messages
-      .slice(-6) // Last 6 messages for context
-      .map((msg) => `${msg.isUser ? 'User' : 'Assistant'}: ${msg.text}`)
-      .join('\n\n');
+    try {
+      // Build conversation context
+      const conversationHistory = messages
+        .slice(-6) // Last 6 messages for context
+        .map((msg) => `${msg.isUser ? 'User' : 'Assistant'}: ${msg.text}`)
+        .join('\n\n');
 
-    const fullPrompt = `${SYSTEM_PROMPT}
+      const fullPrompt = `${SYSTEM_PROMPT}
 
 Conversation history:
 ${conversationHistory}
