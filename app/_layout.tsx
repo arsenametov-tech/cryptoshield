@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { View, ActivityIndicator, Text } from 'react-native';
 import { colors } from '@/constants/theme';
+import { SubscriptionService } from '@/services/subscription';
 
 export default function RootLayout() {
   const [isLoading, setIsLoading] = useState(true);
@@ -13,8 +14,15 @@ export default function RootLayout() {
   const segments = useSegments();
 
   useEffect(() => {
-    checkOnboarding();
+    initializeApp();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const initializeApp = async () => {
+    await checkOnboarding();
+    // Initialize RevenueCat
+    await SubscriptionService.initialize();
+  };
 
   const checkOnboarding = async () => {
     try {

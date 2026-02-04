@@ -58,6 +58,8 @@ export default function Dashboard() {
   const [isScanning, setIsScanning] = useState(false);
   const [securityTip, setSecurityTip] = useState<string>('');
   const [isLoadingTip, setIsLoadingTip] = useState(false);
+  const [isPro, setIsPro] = useState(false);
+  const [scansRemaining, setScansRemaining] = useState(3);
 
   const { generateText } = useTextGeneration();
 
@@ -86,8 +88,17 @@ export default function Dashboard() {
     );
 
     loadSecurityTip();
+    loadSubscriptionStatus();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const loadSubscriptionStatus = async () => {
+    const { scansRemaining: remaining, isPro: proStatus } = await import('@/services/subscription').then(
+      m => m.SubscriptionService.canScan()
+    );
+    setIsPro(proStatus);
+    setScansRemaining(remaining);
+  };
 
   const loadSecurityTip = async () => {
     try {
@@ -121,7 +132,25 @@ export default function Dashboard() {
       return; // Need at least one input
     }
 
+    // Check if user can scan (Pro or has scans remaining)
+    const { canScan, isPro } = await import('@/services/subscription').then(
+      m => m.SubscriptionService.canScan()
+    );
+
+    if (!canScan && !isPro) {
+      // Show upgrade screen
+      router.push('/premium');
+      return;
+    }
+
     setIsScanning(true);
+
+    // Increment scan count for free users
+    if (!isPro) {
+      await import('@/services/subscription').then(
+        m => m.SubscriptionService.incrementScanCount()
+      );
+    }
 
     // Speed up radar animation
     rotation.value = withRepeat(
@@ -206,13 +235,39 @@ export default function Dashboard() {
             Crypto<Text style={styles.headerTitleAccent}>shield</Text>
           </Text>
         </View>
-        <TouchableOpacity
-          style={styles.settingsButton}
-          onPress={() => router.push('/settings')}
-        >
-          <Ionicons name="settings-outline" size={24} color={colors.text} />
-        </TouchableOpacity>
+        <View style={styles.headerRight}>
+          {!isPro && (
+            <TouchableOpacity
+              style={styles.upgradeButton}
+              onPress={() => router.push('/premium')}
+            >
+              <Ionicons name="star" size={16} color={colors.background} />
+              <Text style={styles.upgradeButtonText}>Pro</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            style={styles.settingsButton}
+            onPress={() => router.push('/settings')}
+          >
+            <Ionicons name="settings-outline" size={24} color={colors.text} />
+          </TouchableOpacity>
+        </View>
       </View>
+
+      {/* Scan Counter for Free Users */}
+      {!isPro && scansRemaining >= 0 && (
+        <View style={styles.scanCounterContainer}>
+          <BlurView intensity={20} tint="dark" style={styles.scanCounter}>
+            <Ionicons name="scan" size={20} color={colors.primary} />
+            <Text style={styles.scanCounterText}>
+              {scansRemaining} {scansRemaining === 1 ? 'scan' : 'scans'} remaining today
+            </Text>
+            <TouchableOpacity onPress={() => router.push('/premium')}>
+              <Text style={styles.scanCounterUpgrade}>Upgrade</Text>
+            </TouchableOpacity>
+          </BlurView>
+        </View>
+      )}
 
       <ScrollView
         style={styles.scrollView}
@@ -389,8 +444,52 @@ const styles = StyleSheet.create({
   headerTitleAccent: {
     color: colors.primary,
   },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  upgradeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.full,
+  },
+  upgradeButtonText: {
+    fontSize: typography.fontSize.sm,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.background,
+  },
   settingsButton: {
     padding: spacing.sm,
+  },
+  scanCounterContainer: {
+    paddingHorizontal: spacing.lg,
+    marginTop: spacing.sm,
+  },
+  scanCounter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: spacing.sm,
+  },
+  scanCounterText: {
+    fontSize: typography.fontSize.sm,
+    color: colors.textSecondary,
+    flex: 1,
+  },
+  scanCounterUpgrade: {
+    fontSize: typography.fontSize.sm,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.primary,
   },
   scrollView: {
     flex: 1,

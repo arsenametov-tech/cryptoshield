@@ -22,12 +22,25 @@ export default function ScreenshotAnalysis() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [useDeepAnalysis, setUseDeepAnalysis] = useState(false);
+  const [isPro, setIsPro] = useState(false);
 
   const { analyzeImage, data, isLoading, error } = useImageAnalysis({
     onError: (err) => {
       Alert.alert('Analysis Error', err.message);
     },
   });
+
+  // Check Pro status on mount
+  React.useEffect(() => {
+    checkProStatus();
+  }, []);
+
+  const checkProStatus = async () => {
+    const { SubscriptionService } = await import('@/services/subscription');
+    const proStatus = await SubscriptionService.isPro();
+    setIsPro(proStatus);
+  };
 
   const requestPermission = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -57,9 +70,7 @@ export default function ScreenshotAnalysis() {
         setSelectedImage(imageUri);
 
         // Analyze with Newell AI Vision
-        await analyzeImage({
-          imageUrl: imageUri,
-          prompt: `Analyze this image for cryptocurrency scam indicators. Look for:
+        const basePrompt = `Analyze this image for cryptocurrency scam indicators. Look for:
           - Promises of guaranteed high returns or "instant profits"
           - Phrases like "double your money", "risk-free", "limited time only"
           - Fake celebrity endorsements or impersonations
@@ -70,7 +81,23 @@ export default function ScreenshotAnalysis() {
           - Claims of insider information
           - Unprofessional design or poor grammar
 
-          Provide a security analysis highlighting any red flags found.`,
+          Provide a security analysis highlighting any red flags found.`;
+
+        const deepPrompt = `${basePrompt}
+
+          DEEP ANALYSIS MODE (Pro Feature):
+          Additionally perform comprehensive threat analysis:
+          - Extract and analyze any URLs or wallet addresses
+          - Identify social engineering tactics and psychological manipulation
+          - Detect subtle linguistic patterns used in scams
+          - Analyze visual design elements for legitimacy
+          - Cross-reference common scam templates and patterns
+          - Provide detailed mitigation steps and recommendations
+          - Rate the threat level on a scale of 1-10 with detailed reasoning`;
+
+        await analyzeImage({
+          imageUrl: imageUri,
+          prompt: useDeepAnalysis ? deepPrompt : basePrompt,
         });
       }
     } catch {
@@ -99,9 +126,7 @@ export default function ScreenshotAnalysis() {
         setSelectedImage(imageUri);
 
         // Analyze with Newell AI Vision
-        await analyzeImage({
-          imageUrl: imageUri,
-          prompt: `Analyze this image for cryptocurrency scam indicators. Look for:
+        const basePrompt = `Analyze this image for cryptocurrency scam indicators. Look for:
           - Promises of guaranteed high returns or "instant profits"
           - Phrases like "double your money", "risk-free", "limited time only"
           - Fake celebrity endorsements or impersonations
@@ -112,7 +137,23 @@ export default function ScreenshotAnalysis() {
           - Claims of insider information
           - Unprofessional design or poor grammar
 
-          Provide a security analysis highlighting any red flags found.`,
+          Provide a security analysis highlighting any red flags found.`;
+
+        const deepPrompt = `${basePrompt}
+
+          DEEP ANALYSIS MODE (Pro Feature):
+          Additionally perform comprehensive threat analysis:
+          - Extract and analyze any URLs or wallet addresses
+          - Identify social engineering tactics and psychological manipulation
+          - Detect subtle linguistic patterns used in scams
+          - Analyze visual design elements for legitimacy
+          - Cross-reference common scam templates and patterns
+          - Provide detailed mitigation steps and recommendations
+          - Rate the threat level on a scale of 1-10 with detailed reasoning`;
+
+        await analyzeImage({
+          imageUrl: imageUri,
+          prompt: useDeepAnalysis ? deepPrompt : basePrompt,
         });
       }
     } catch {
@@ -209,6 +250,80 @@ export default function ScreenshotAnalysis() {
         <Text style={styles.subtitle}>
           Upload chats, ads, or whitepapers. Newell Vision detects red flags.
         </Text>
+
+        {/* Deep Analysis Toggle */}
+        {!selectedImage && (
+          <View style={styles.deepAnalysisContainer}>
+            <LinearGradient
+              colors={
+                isPro
+                  ? [`${colors.primary}22`, 'transparent']
+                  : [`${colors.textMuted}11`, 'transparent']
+              }
+              style={styles.deepAnalysisCard}
+            >
+              <View style={styles.deepAnalysisContent}>
+                <View style={styles.deepAnalysisLeft}>
+                  <View style={styles.deepAnalysisHeader}>
+                    <Ionicons
+                      name="sparkles"
+                      size={20}
+                      color={isPro ? colors.primary : colors.textMuted}
+                    />
+                    <Text
+                      style={[
+                        styles.deepAnalysisTitle,
+                        !isPro && styles.deepAnalysisDisabled,
+                      ]}
+                    >
+                      Deep Screenshot Analysis
+                    </Text>
+                    {!isPro && (
+                      <View style={styles.proBadgeSmall}>
+                        <Ionicons name="star" size={12} color={colors.primary} />
+                        <Text style={styles.proBadgeText}>PRO</Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text
+                    style={[
+                      styles.deepAnalysisDescription,
+                      !isPro && styles.deepAnalysisDisabled,
+                    ]}
+                  >
+                    {isPro
+                      ? 'Advanced threat detection with detailed analysis'
+                      : 'Unlock comprehensive threat analysis'}
+                  </Text>
+                </View>
+
+                {isPro ? (
+                  <TouchableOpacity
+                    style={[
+                      styles.deepAnalysisToggle,
+                      useDeepAnalysis && styles.deepAnalysisToggleActive,
+                    ]}
+                    onPress={() => setUseDeepAnalysis(!useDeepAnalysis)}
+                  >
+                    <View
+                      style={[
+                        styles.deepAnalysisToggleThumb,
+                        useDeepAnalysis && styles.deepAnalysisToggleThumbActive,
+                      ]}
+                    />
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.upgradeButtonSmall}
+                    onPress={() => router.push('/premium')}
+                  >
+                    <Text style={styles.upgradeButtonSmallText}>Upgrade</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </LinearGradient>
+          </View>
+        )}
 
         {/* Image Selection Buttons */}
         {!selectedImage && (
@@ -568,5 +683,88 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeight.medium,
     color: colors.textSecondary,
     lineHeight: 20,
+  },
+  deepAnalysisContainer: {
+    marginBottom: spacing.lg,
+  },
+  deepAnalysisCard: {
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: 'hidden',
+  },
+  deepAnalysisContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: spacing.md,
+  },
+  deepAnalysisLeft: {
+    flex: 1,
+    marginRight: spacing.md,
+  },
+  deepAnalysisHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  deepAnalysisTitle: {
+    fontSize: typography.fontSize.md,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text,
+  },
+  deepAnalysisDisabled: {
+    color: colors.textMuted,
+  },
+  deepAnalysisDescription: {
+    fontSize: typography.fontSize.sm,
+    color: colors.textSecondary,
+    lineHeight: 18,
+  },
+  proBadgeSmall: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs / 2,
+    backgroundColor: `${colors.primary}22`,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs / 2,
+    borderRadius: borderRadius.sm,
+  },
+  proBadgeText: {
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.primary,
+  },
+  deepAnalysisToggle: {
+    width: 50,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.border,
+    padding: 2,
+    justifyContent: 'center',
+  },
+  deepAnalysisToggleActive: {
+    backgroundColor: colors.primary,
+  },
+  deepAnalysisToggleThumb: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colors.text,
+  },
+  deepAnalysisToggleThumbActive: {
+    transform: [{ translateX: 22 }],
+  },
+  upgradeButtonSmall: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.md,
+  },
+  upgradeButtonSmallText: {
+    fontSize: typography.fontSize.sm,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.background,
   },
 });

@@ -46,6 +46,16 @@ Always:
 
 Respond in a professional but approachable tone. Keep responses concise (2-4 paragraphs max) unless detailed analysis is requested.`;
 
+const PRO_SYSTEM_PROMPT = `${SYSTEM_PROMPT}
+
+PRO MODE - Enhanced Analysis:
+As a Pro subscriber is using this chat, provide more detailed and comprehensive responses with:
+- Deeper technical analysis and explanations
+- More specific security recommendations
+- Additional context about threats and vulnerabilities
+- Advanced security patterns and best practices
+- Priority response with extra detail when appropriate`;
+
 export default function AIConsultant() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -60,8 +70,20 @@ export default function AIConsultant() {
     },
   ]);
   const [inputText, setInputText] = useState('');
+  const [isPro, setIsPro] = useState(false);
 
   const { generateText, isLoading } = useTextGeneration();
+
+  // Check Pro status on mount
+  useEffect(() => {
+    checkProStatus();
+  }, []);
+
+  const checkProStatus = async () => {
+    const { SubscriptionService } = await import('@/services/subscription');
+    const proStatus = await SubscriptionService.isPro();
+    setIsPro(proStatus);
+  };
 
   useEffect(() => {
     // Auto-scroll to bottom when new messages arrive
@@ -88,7 +110,7 @@ export default function AIConsultant() {
         .map((msg) => `${msg.isUser ? 'User' : 'Assistant'}: ${msg.text}`)
         .join('\n\n');
 
-      const fullPrompt = `${SYSTEM_PROMPT}
+      const fullPrompt = `${isPro ? PRO_SYSTEM_PROMPT : SYSTEM_PROMPT}
 
 Conversation history:
 ${conversationHistory}
@@ -139,8 +161,15 @@ Please provide a helpful security-focused response.`;
           <View style={styles.aiIndicator}>
             <View style={styles.aiDot} />
             <Text style={styles.headerTitle}>AI Security Expert</Text>
+            {isPro && (
+              <View style={styles.proBadgeHeader}>
+                <Ionicons name="star" size={12} color={colors.primary} />
+              </View>
+            )}
           </View>
-          <Text style={styles.headerSubtitle}>Powered by Newell AI</Text>
+          <Text style={styles.headerSubtitle}>
+            {isPro ? 'Priority Pro Mode • Newell AI' : 'Powered by Newell AI'}
+          </Text>
         </View>
 
         <View style={styles.headerRight} />
@@ -276,6 +305,11 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.xs,
     color: colors.textSecondary,
     marginTop: 2,
+  },
+  proBadgeHeader: {
+    backgroundColor: `${colors.primary}22`,
+    borderRadius: borderRadius.full,
+    padding: spacing.xs / 2,
   },
   headerRight: {
     width: 40,

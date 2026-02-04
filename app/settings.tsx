@@ -29,10 +29,22 @@ export default function SettingsScreen() {
   const [isEditingName, setIsEditingName] = useState(false);
   const [tempName, setTempName] = useState('');
   const [showAbout, setShowAbout] = useState(false);
+  const [isPro, setIsPro] = useState(false);
 
   useEffect(() => {
     loadPreferences();
+    checkProStatus();
   }, []);
+
+  const checkProStatus = async () => {
+    try {
+      const { SubscriptionService } = await import('@/services/subscription');
+      const proStatus = await SubscriptionService.isPro();
+      setIsPro(proStatus);
+    } catch (error) {
+      console.error('Error checking Pro status:', error);
+    }
+  };
 
   const loadPreferences = async () => {
     const prefs = await StorageService.getPreferences();
@@ -163,11 +175,51 @@ export default function SettingsScreen() {
                     <Ionicons name="pencil" size={16} color={colors.textSecondary} />
                   </TouchableOpacity>
                 )}
-                <Text style={styles.userRole}>Crypto Security User</Text>
+                <View style={styles.userRoleContainer}>
+                  <Text style={styles.userRole}>
+                    {isPro ? 'Cryptoshield Pro Member' : 'Crypto Security User'}
+                  </Text>
+                  {isPro && (
+                    <View style={styles.proBadge}>
+                      <Ionicons name="star" size={12} color={colors.primary} />
+                    </View>
+                  )}
+                </View>
               </View>
             </View>
           </BlurView>
         </View>
+
+        {/* Subscription Section */}
+        {!isPro && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Subscription</Text>
+
+            <TouchableOpacity onPress={() => router.push('/premium')}>
+              <BlurView intensity={20} tint="dark" style={styles.upgradeCard}>
+                <LinearGradient
+                  colors={[`${colors.primary}22`, 'transparent']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.upgradeCardGradient}
+                >
+                  <View style={styles.upgradeCardContent}>
+                    <View style={styles.upgradeIconContainer}>
+                      <Ionicons name="star" size={32} color={colors.primary} />
+                    </View>
+                    <View style={styles.upgradeTextContainer}>
+                      <Text style={styles.upgradeTitle}>Upgrade to Pro</Text>
+                      <Text style={styles.upgradeDescription}>
+                        Unlock unlimited scans and advanced features
+                      </Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={24} color={colors.primary} />
+                  </View>
+                </LinearGradient>
+              </BlurView>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Notifications Section */}
         <View style={styles.section}>
@@ -436,10 +488,60 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeight.bold,
     color: colors.text,
   },
+  userRoleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacing.xs,
+    gap: spacing.xs,
+  },
   userRole: {
     fontSize: typography.fontSize.sm,
     color: colors.textSecondary,
-    marginTop: spacing.xs,
+  },
+  proBadge: {
+    backgroundColor: `${colors.primary}22`,
+    borderRadius: borderRadius.full,
+    padding: spacing.xs / 2,
+  },
+  upgradeCard: {
+    borderRadius: borderRadius.lg,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.primary,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+  },
+  upgradeCardGradient: {
+    padding: spacing.lg,
+  },
+  upgradeCardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  upgradeIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: `${colors.primary}22`,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  upgradeTextContainer: {
+    flex: 1,
+  },
+  upgradeTitle: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text,
+    marginBottom: spacing.xs / 2,
+  },
+  upgradeDescription: {
+    fontSize: typography.fontSize.sm,
+    color: colors.textSecondary,
+    lineHeight: 18,
   },
   settingRow: {
     flexDirection: 'row',
