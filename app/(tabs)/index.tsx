@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -7,15 +7,18 @@ import {
   TextInput,
   ScrollView,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withRepeat,
   withTiming,
   Easing,
+  withSequence,
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, spacing, borderRadius, typography } from '@/constants/theme';
@@ -46,7 +49,13 @@ const RECENT_CHECKS: RecentCheck[] = [
 ];
 
 export default function Dashboard() {
+  const router = useRouter();
+  const [contractAddress, setContractAddress] = useState('');
+  const [websiteUrl, setWebsiteUrl] = useState('');
+  const [isScanning, setIsScanning] = useState(false);
+
   const rotation = useSharedValue(0);
+  const radarScale = useSharedValue(1);
 
   useEffect(() => {
     rotation.value = withRepeat(
@@ -59,9 +68,49 @@ export default function Dashboard() {
     );
   }, [rotation]);
 
+  const handleScan = async () => {
+    if (!contractAddress.trim() && !websiteUrl.trim()) {
+      return; // Need at least one input
+    }
+
+    setIsScanning(true);
+
+    // Speed up radar animation
+    rotation.value = withRepeat(
+      withTiming(360, {
+        duration: 800,
+        easing: Easing.linear,
+      }),
+      3,
+      false
+    );
+
+    // Pulse effect
+    radarScale.value = withSequence(
+      withTiming(1.1, { duration: 300 }),
+      withTiming(1, { duration: 300 })
+    );
+
+    // Simulate scanning delay
+    setTimeout(() => {
+      setIsScanning(false);
+      const addressToScan = contractAddress.trim() || websiteUrl.trim();
+      router.push({
+        pathname: '/scan-results',
+        params: { address: addressToScan },
+      });
+    }, 2000);
+  };
+
   const animatedStyle = useAnimatedStyle(() => {
     return {
       transform: [{ rotate: `${rotation.value}deg` }],
+    };
+  });
+
+  const radarAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ scale: radarScale.value }],
     };
   });
 
@@ -115,31 +164,43 @@ export default function Dashboard() {
       >
         {/* Radar Scanner */}
         <View style={styles.radarContainer}>
-          <View style={styles.radarCircle}>
-            {/* Concentric circles */}
-            <View style={[styles.circle, styles.circle1]} />
-            <View style={[styles.circle, styles.circle2]} />
-            <View style={[styles.circle, styles.circle3]} />
+          <Animated.View style={[radarAnimatedStyle]}>
+            <View style={styles.radarCircle}>
+              {/* Concentric circles */}
+              <View style={[styles.circle, styles.circle1]} />
+              <View style={[styles.circle, styles.circle2]} />
+              <View style={[styles.circle, styles.circle3]} />
 
-            {/* Rotating sweep */}
-            <Animated.View style={[styles.radarSweep, animatedStyle]}>
-              <LinearGradient
-                colors={['rgba(0, 255, 200, 0)', 'rgba(0, 255, 200, 0.5)']}
-                start={{ x: 0.5, y: 0.5 }}
-                end={{ x: 1, y: 0.5 }}
-                style={styles.sweepGradient}
-              />
-            </Animated.View>
+              {/* Rotating sweep */}
+              <Animated.View style={[styles.radarSweep, animatedStyle]}>
+                <LinearGradient
+                  colors={['rgba(0, 255, 200, 0)', 'rgba(0, 255, 200, 0.5)']}
+                  start={{ x: 0.5, y: 0.5 }}
+                  end={{ x: 1, y: 0.5 }}
+                  style={styles.sweepGradient}
+                />
+              </Animated.View>
 
-            {/* Center Icon */}
-            <View style={styles.centerIcon}>
-              <Ionicons name="finger-print" size={48} color={colors.primary} />
+              {/* Center Icon */}
+              <View style={styles.centerIcon}>
+                {isScanning ? (
+                  <ActivityIndicator size="large" color={colors.primary} />
+                ) : (
+                  <Ionicons name="finger-print" size={48} color={colors.primary} />
+                )}
+              </View>
             </View>
-          </View>
+          </Animated.View>
 
           {/* Tap to Scan */}
-          <TouchableOpacity style={styles.scanButton}>
-            <Text style={styles.scanButtonText}>TAP TO SCAN</Text>
+          <TouchableOpacity
+            style={styles.scanButton}
+            onPress={handleScan}
+            disabled={isScanning || (!contractAddress.trim() && !websiteUrl.trim())}
+          >
+            <Text style={styles.scanButtonText}>
+              {isScanning ? 'SCANNING...' : 'TAP TO SCAN'}
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -150,6 +211,11 @@ export default function Dashboard() {
               style={styles.input}
               placeholder="Enter Contract Address (0x...)"
               placeholderTextColor={colors.textMuted}
+              value={contractAddress}
+              onChangeText={setContractAddress}
+              editable={!isScanning}
+              autoCapitalize="none"
+              autoCorrect={false}
             />
           </View>
 
@@ -158,6 +224,12 @@ export default function Dashboard() {
               style={styles.input}
               placeholder="Check Website URL"
               placeholderTextColor={colors.textMuted}
+              value={websiteUrl}
+              onChangeText={setWebsiteUrl}
+              editable={!isScanning}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="url"
             />
           </View>
         </View>
@@ -174,6 +246,10 @@ export default function Dashboard() {
                   styles.recentCheckCard,
                   { borderColor: getStatusColor(check.status) },
                 ]}
+                onPress={() => router.push({
+                  pathname: '/scan-results',
+                  params: { address: check.name },
+                })}
               >
                 <Ionicons
                   name={getStatusIcon(check.status)}
