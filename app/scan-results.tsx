@@ -20,6 +20,7 @@ import Animated, {
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, spacing, borderRadius, typography } from '@/constants/theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StorageService } from '@/services/storage';
 
 const { width } = Dimensions.get('window');
 const GAUGE_SIZE = width * 0.55;
@@ -38,6 +39,7 @@ export default function ScanResults() {
 
   // Parse the contract address from params
   const contractAddress = params.address as string || 'Unknown';
+  const fromHistory = params.fromHistory as string;
 
   // Mock risk calculation based on address
   const calculateRiskScore = (address: string): number => {
@@ -48,6 +50,25 @@ export default function ScanResults() {
   };
 
   const riskScore = calculateRiskScore(contractAddress);
+
+  // Determine scan name from address
+  const getScanName = (address: string): string => {
+    if (address.toLowerCase().includes('safe')) return 'SafeMoon V3';
+    if (address.toLowerCase().includes('ponzi')) return 'Ponzicift';
+    if (address.startsWith('0x')) {
+      return `Contract ${address.substring(0, 10)}...`;
+    }
+    if (address.startsWith('http')) {
+      try {
+        return new URL(address).hostname;
+      } catch {
+        return 'Website Scan';
+      }
+    }
+    return address.length > 30 ? `${address.substring(0, 30)}...` : address;
+  };
+
+  const scanName = getScanName(contractAddress);
 
   // Security checks based on risk score
   const securityChecks: SecurityCheck[] = [
@@ -145,6 +166,24 @@ export default function ScanResults() {
       damping: 12,
       stiffness: 100,
     });
+
+    // Save to history (only if not viewing from history)
+    if (!fromHistory) {
+      const status: 'safe' | 'warning' | 'critical' =
+        riskScore >= 70 ? 'critical' : riskScore >= 40 ? 'warning' : 'safe';
+
+      const type: 'contract' | 'website' =
+        contractAddress.startsWith('http') ? 'website' : 'contract';
+
+      StorageService.saveScan({
+        name: scanName,
+        address: contractAddress,
+        date: new Date().toLocaleString(),
+        status,
+        score: riskScore,
+        type,
+      });
+    }
   }, []);
 
   const gaugeStyle = useAnimatedStyle(() => {

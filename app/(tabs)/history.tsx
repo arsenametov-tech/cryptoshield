@@ -1,42 +1,53 @@
-import React from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { colors, spacing, borderRadius, typography } from '@/constants/theme';
-
-interface HistoryItem {
-  id: string;
-  name: string;
-  date: string;
-  status: 'safe' | 'critical' | 'warning';
-  score: number;
-}
-
-const HISTORY_DATA: HistoryItem[] = [
-  {
-    id: '1',
-    name: 'SafeMoon V3',
-    date: '2 hours ago',
-    status: 'safe',
-    score: 7,
-  },
-  {
-    id: '2',
-    name: 'Ponzicift',
-    date: '5 hours ago',
-    status: 'critical',
-    score: 98,
-  },
-  {
-    id: '3',
-    name: 'CryptoToken XYZ',
-    date: '1 day ago',
-    status: 'warning',
-    score: 45,
-  },
-];
+import { StorageService, ScanHistoryItem } from '@/services/storage';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function History() {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const [history, setHistory] = useState<ScanHistoryItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const loadHistory = async () => {
+    try {
+      const data = await StorageService.getHistory();
+      setHistory(data);
+    } catch (error) {
+      console.error('Error loading history:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      loadHistory();
+    }, [])
+  );
+
+  const handleClearHistory = () => {
+    Alert.alert(
+      'Clear History',
+      'Are you sure you want to clear all scan history? This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear',
+          style: 'destructive',
+          onPress: async () => {
+            await StorageService.clearHistory();
+            setHistory([]);
+          },
+        },
+      ]
+    );
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'safe':
@@ -63,26 +74,73 @@ export default function History() {
     }
   };
 
-  const renderItem = ({ item }: { item: HistoryItem }) => (
-    <TouchableOpacity style={styles.historyCard}>
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'safe':
+        return 'SAFE';
+      case 'warning':
+        return 'MODERATE';
+      case 'critical':
+        return 'CRITICAL';
+      default:
+        return 'UNKNOWN';
+    }
+  };
+
+  const formatDate = (timestamp: number): string => {
+    const now = Date.now();
+    const diff = now - timestamp;
+
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return `${minutes}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    if (days < 7) return `${days}d ago`;
+
+    return new Date(timestamp).toLocaleDateString();
+  };
+
+  const renderItem = ({ item }: { item: ScanHistoryItem }) => (
+    <TouchableOpacity
+      style={styles.historyCard}
+      onPress={() => router.push({
+        pathname: '/scan-results',
+        params: { address: item.address, fromHistory: 'true' },
+      })}
+    >
       <View style={styles.cardLeft}>
-        <Ionicons
-          name={getStatusIcon(item.status)}
-          size={32}
-          color={getStatusColor(item.status)}
-        />
+        <View style={[styles.statusIcon, { backgroundColor: getStatusColor(item.status) + '20' }]}>
+          <Ionicons
+            name={getStatusIcon(item.status)}
+            size={28}
+            color={getStatusColor(item.status)}
+          />
+        </View>
         <View style={styles.cardInfo}>
-          <Text style={styles.cardTitle}>{item.name}</Text>
-          <Text style={styles.cardDate}>{item.date}</Text>
+          <Text style={styles.cardTitle} numberOfLines={1}>{item.name}</Text>
+          <View style={styles.cardMeta}>
+            <Ionicons
+              name={item.type === 'contract' ? 'code-slash' : 'globe-outline'}
+              size={12}
+              color={colors.textMuted}
+            />
+            <Text style={styles.cardDate}>{formatDate(item.timestamp)}</Text>
+          </View>
         </View>
       </View>
       <View style={styles.cardRight}>
         <Text style={[styles.cardScore, { color: getStatusColor(item.status) }]}>
-          {item.score}/100
+          {item.score}
         </Text>
-        <Text style={[styles.cardStatus, { color: getStatusColor(item.status) }]}>
-          {item.status.toUpperCase()}
-        </Text>
+        <Text style={styles.cardScoreSuffix}>/100</Text>
+        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) + '20' }]}>
+          <Text style={[styles.cardStatus, { color: getStatusColor(item.status) }]}>
+            {getStatusLabel(item.status)}
+          </Text>
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -92,22 +150,34 @@ export default function History() {
       <StatusBar style="light" />
 
       {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Scan History</Text>
+      <View style={[styles.header, { paddingTop: insets.top + spacing.lg }]}>
+        <View>
+          <Text style={styles.headerTitle}>Scan History</Text>
+          <Text style={styles.headerSubtitle}>
+            {history.length} {history.length === 1 ? 'scan' : 'scans'} recorded
+          </Text>
+        </View>
+        {history.length > 0 && (
+          <TouchableOpacity style={styles.clearButton} onPress={handleClearHistory}>
+            <Ionicons name="trash-outline" size={20} color={colors.danger} />
+          </TouchableOpacity>
+        )}
       </View>
 
       <FlatList
-        data={HISTORY_DATA}
+        data={history}
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Ionicons name="time-outline" size={64} color={colors.textMuted} />
+            <View style={styles.emptyIconCircle}>
+              <Ionicons name="time-outline" size={48} color={colors.primary} />
+            </View>
             <Text style={styles.emptyText}>No scan history yet</Text>
             <Text style={styles.emptySubtext}>
-              Start scanning contracts to see your history here
+              Start scanning contracts and websites{'\n'}to build your security log
             </Text>
           </View>
         }
@@ -122,8 +192,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.xl + 20,
     paddingBottom: spacing.lg,
   },
   headerTitle: {
@@ -131,9 +203,21 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeight.bold,
     color: colors.text,
   },
+  headerSubtitle: {
+    fontSize: typography.fontSize.sm,
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
+  },
+  clearButton: {
+    padding: spacing.sm,
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: borderRadius.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
   listContent: {
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xl,
+    paddingBottom: spacing.xl + 80,
   },
   historyCard: {
     flexDirection: 'row',
@@ -152,6 +236,13 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     flex: 1,
   },
+  statusIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: borderRadius.sm,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   cardInfo: {
     flex: 1,
   },
@@ -161,21 +252,39 @@ const styles = StyleSheet.create({
     color: colors.text,
     marginBottom: spacing.xs,
   },
+  cardMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
   cardDate: {
-    fontSize: typography.fontSize.sm,
+    fontSize: typography.fontSize.xs,
     color: colors.textMuted,
   },
   cardRight: {
     alignItems: 'flex-end',
+    gap: spacing.xs,
   },
   cardScore: {
-    fontSize: typography.fontSize.lg,
+    fontSize: typography.fontSize.xxl,
     fontWeight: typography.fontWeight.bold,
-    marginBottom: spacing.xs,
+    lineHeight: typography.fontSize.xxl,
+  },
+  cardScoreSuffix: {
+    fontSize: typography.fontSize.sm,
+    color: colors.textMuted,
+    marginTop: -spacing.xs,
+  },
+  statusBadge: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs / 2,
+    borderRadius: borderRadius.sm,
+    marginTop: spacing.xs,
   },
   cardStatus: {
     fontSize: typography.fontSize.xs,
-    fontWeight: typography.fontWeight.semibold,
+    fontWeight: typography.fontWeight.bold,
+    letterSpacing: 0.5,
   },
   emptyContainer: {
     alignItems: 'center',
@@ -183,14 +292,26 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xxl * 2,
     gap: spacing.md,
   },
+  emptyIconCircle: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: colors.backgroundSecondary,
+    borderWidth: 2,
+    borderColor: colors.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
   emptyText: {
-    fontSize: typography.fontSize.lg,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.textSecondary,
+    fontSize: typography.fontSize.xl,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text,
   },
   emptySubtext: {
     fontSize: typography.fontSize.md,
     color: colors.textMuted,
     textAlign: 'center',
+    lineHeight: 22,
   },
 });
