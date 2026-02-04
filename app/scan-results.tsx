@@ -184,6 +184,7 @@ export default function ScanResults() {
         type,
       });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const gaugeStyle = useAnimatedStyle(() => {
@@ -270,7 +271,7 @@ export default function ScanResults() {
             {/* Animated arc */}
             <Animated.View style={[styles.arcContainer, gaugeStyle]}>
               <LinearGradient
-                colors={riskInfo.gradient}
+                colors={riskInfo.gradient as [string, string, ...string[]]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={styles.arc}

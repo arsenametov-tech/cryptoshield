@@ -19,6 +19,7 @@ import Animated, {
   Easing,
   interpolate,
   Extrapolate,
+  SharedValue,
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
@@ -66,7 +67,7 @@ const slides: OnboardingSlide[] = [
   },
 ];
 
-const PaginationDot = React.memo(({ index, scrollX }: { index: number; scrollX: Animated.SharedValue<number> }) => {
+const PaginationDot = React.memo(({ index, scrollX }: { index: number; scrollX: SharedValue<number> }) => {
   const dotStyle = useAnimatedStyle(() => {
     const inputRange = [
       (index - 1) * width,
@@ -111,7 +112,7 @@ export default function OnboardingScreen() {
 
   const handleViewableItemsChanged = useRef(
     ({ viewableItems }: { viewableItems: ViewToken[] }) => {
-      if (viewableItems[0]?.index !== undefined) {
+      if (viewableItems[0]?.index !== undefined && viewableItems[0].index !== null) {
         setCurrentIndex(viewableItems[0].index);
       }
     }
@@ -224,7 +225,7 @@ const SlideItem = React.memo(({
 }: {
   item: OnboardingSlide;
   index: number;
-  scrollX: Animated.SharedValue<number>;
+  scrollX: SharedValue<number>;
 }) => {
   const pulseAnimation = useSharedValue(1);
 

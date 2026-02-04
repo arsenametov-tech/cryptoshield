@@ -24,7 +24,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { colors, spacing, borderRadius, typography } from '@/constants/theme';
 import { StorageService } from '@/services/storage';
-import { NewellAI } from '@fastshot/ai';
+import { useTextGeneration } from '@fastshot/ai';
 
 const { width } = Dimensions.get('window');
 const RADAR_SIZE = width * 0.6;
@@ -59,6 +59,8 @@ export default function Dashboard() {
   const [securityTip, setSecurityTip] = useState<string>('');
   const [isLoadingTip, setIsLoadingTip] = useState(false);
 
+  const { generateText } = useTextGeneration();
+
   const rotation = useSharedValue(0);
   const radarScale = useSharedValue(1);
   const scanButtonPulse = useSharedValue(1);
@@ -84,7 +86,8 @@ export default function Dashboard() {
     );
 
     loadSecurityTip();
-  }, [rotation, scanButtonPulse]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const loadSecurityTip = async () => {
     try {
@@ -99,14 +102,10 @@ export default function Dashboard() {
 
       // Generate new tip using Newell AI
       setIsLoadingTip(true);
-      const ai = new NewellAI();
 
-      const response = await ai.text.generate({
-        prompt: 'Generate a short, practical crypto security tip (max 100 words). Focus on topics like phishing, rug pulls, smart contract risks, wallet security, or social engineering. Make it actionable and easy to understand for crypto users.',
-        temperature: 0.8,
-      });
+      const response = await generateText('Generate a short, practical crypto security tip (max 100 words). Focus on topics like phishing, rug pulls, smart contract risks, wallet security, or social engineering. Make it actionable and easy to understand for crypto users.');
 
-      const tip = response.text || 'Always verify contract addresses before transactions and never share your private keys.';
+      const tip = response || 'Always verify contract addresses before transactions and never share your private keys.';
       setSecurityTip(tip);
       await StorageService.saveSecurityTip(tip);
     } catch (error) {

@@ -1,7 +1,7 @@
-import { Stack } from "expo-router";
+import { Stack, useRouter, useSegments } from "expo-router";
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useEffect, useState } from 'react';
-import { useRouter, useSegments } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { View, ActivityIndicator, Text } from 'react-native';
 import { colors } from '@/constants/theme';
@@ -30,7 +30,6 @@ export default function RootLayout() {
   useEffect(() => {
     if (isLoading) return;
 
-    const inTabs = segments[0] === '(tabs)';
     const inOnboarding = segments[0] === 'onboarding';
 
     if (!hasCompletedOnboarding && !inOnboarding) {
@@ -38,7 +37,7 @@ export default function RootLayout() {
     } else if (hasCompletedOnboarding && inOnboarding) {
       router.replace('/(tabs)');
     }
-  }, [hasCompletedOnboarding, segments, isLoading]);
+  }, [hasCompletedOnboarding, segments, isLoading, router]);
 
   if (isLoading) {
     return (
@@ -65,11 +64,13 @@ export default function RootLayout() {
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="onboarding" options={{ headerShown: false }} />
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      </Stack>
-    </GestureHandlerRootView>
+    <SafeAreaProvider>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        </Stack>
+      </GestureHandlerRootView>
+    </SafeAreaProvider>
   );
 }

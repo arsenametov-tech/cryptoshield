@@ -62,7 +62,7 @@ export default function ScamDetail() {
         {/* Hero Section */}
         <View style={styles.heroCard}>
           <LinearGradient
-            colors={scam.gradient}
+            colors={scam.gradient as [string, string, ...string[]]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.heroGradient}

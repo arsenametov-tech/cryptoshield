@@ -73,7 +73,7 @@ export default function ScreenshotAnalysis() {
           Provide a security analysis highlighting any red flags found.`,
         });
       }
-    } catch (err) {
+    } catch {
       Alert.alert('Error', 'Failed to pick image. Please try again.');
     }
   };
@@ -115,7 +115,7 @@ export default function ScreenshotAnalysis() {
           Provide a security analysis highlighting any red flags found.`,
         });
       }
-    } catch (err) {
+    } catch {
       Alert.alert('Error', 'Failed to take photo. Please try again.');
     }
   };

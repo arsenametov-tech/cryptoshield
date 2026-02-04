@@ -11,7 +11,6 @@ export default function History() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [history, setHistory] = useState<ScanHistoryItem[]>([]);
-  const [loading, setLoading] = useState(true);
 
   const loadHistory = async () => {
     try {
@@ -19,8 +18,6 @@ export default function History() {
       setHistory(data);
     } catch (error) {
       console.error('Error loading history:', error);
-    } finally {
-      setLoading(false);
     }
   };
 

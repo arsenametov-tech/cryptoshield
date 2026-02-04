@@ -174,7 +174,7 @@ export default function Learn() {
               <Text style={styles.tipNumberText}>3</Text>
             </View>
             <Text style={styles.tipText}>
-              Be wary of guaranteed returns or "too good to be true" offers
+              Be wary of guaranteed returns or &ldquo;too good to be true&rdquo; offers
             </Text>
           </View>
 
