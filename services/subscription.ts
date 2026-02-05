@@ -1,4 +1,10 @@
-import Purchases, { PurchasesPackage, CustomerInfo, PurchasesOfferings } from 'react-native-purchases';
+import { adapty } from 'react-native-adapty';
+import type {
+  AdaptyProfile,
+  AdaptyPaywall,
+  AdaptyPaywallProduct,
+  AdaptyPurchaseResult,
+} from 'react-native-adapty';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const SCAN_COUNT_KEY = '@cryptoshield_scan_count';
@@ -13,20 +19,22 @@ export interface ScanUsage {
 
 export const SubscriptionService = {
   /**
-   * Initialize RevenueCat SDK
+   * Initialize Adapty SDK
    */
   async initialize(): Promise<void> {
     try {
-      const apiKey = process.env.EXPO_PUBLIC_REVENUECAT_API_KEY;
+      const apiKey = process.env.EXPO_PUBLIC_ADAPTY_API_KEY;
       if (!apiKey) {
-        console.warn('RevenueCat API key not found. Subscription features will be limited.');
+        console.warn('Adapty API key not found. Subscription features will be limited.');
         return;
       }
 
-      await Purchases.configure({ apiKey });
-      console.log('RevenueCat initialized successfully');
+      await adapty.activate(apiKey, {
+        __ignoreActivationOnFastRefresh: __DEV__,
+      });
+      console.log('Adapty initialized successfully');
     } catch (error) {
-      console.error('Error initializing RevenueCat:', error);
+      console.error('Error initializing Adapty:', error);
     }
   },
 
@@ -35,13 +43,13 @@ export const SubscriptionService = {
    */
   async isPro(): Promise<boolean> {
     try {
-      const apiKey = process.env.EXPO_PUBLIC_REVENUECAT_API_KEY;
+      const apiKey = process.env.EXPO_PUBLIC_ADAPTY_API_KEY;
       if (!apiKey) {
         return false;
       }
 
-      const customerInfo = await Purchases.getCustomerInfo();
-      return Boolean(customerInfo.entitlements.active['pro']);
+      const profile = await adapty.getProfile();
+      return profile?.accessLevels?.['premium']?.isActive ?? false;
     } catch (error) {
       console.error('Error checking Pro status:', error);
       return false;
@@ -49,54 +57,75 @@ export const SubscriptionService = {
   },
 
   /**
-   * Get current customer info
+   * Get current profile
    */
-  async getCustomerInfo(): Promise<CustomerInfo | null> {
+  async getProfile(): Promise<AdaptyProfile | null> {
     try {
-      const apiKey = process.env.EXPO_PUBLIC_REVENUECAT_API_KEY;
+      const apiKey = process.env.EXPO_PUBLIC_ADAPTY_API_KEY;
       if (!apiKey) {
         return null;
       }
 
-      return await Purchases.getCustomerInfo();
+      return await adapty.getProfile();
     } catch (error) {
-      console.error('Error getting customer info:', error);
+      console.error('Error getting profile:', error);
       return null;
     }
   },
 
   /**
-   * Get available offerings
+   * Get paywall
    */
-  async getOfferings(): Promise<PurchasesOfferings | null> {
+  async getPaywall(): Promise<AdaptyPaywall | null> {
     try {
-      const apiKey = process.env.EXPO_PUBLIC_REVENUECAT_API_KEY;
+      const apiKey = process.env.EXPO_PUBLIC_ADAPTY_API_KEY;
       if (!apiKey) {
         return null;
       }
 
-      return await Purchases.getOfferings();
+      const placementId = process.env.EXPO_PUBLIC_ADAPTY_PLACEMENT_ID ?? 'default';
+      return await adapty.getPaywall(placementId);
     } catch (error) {
-      console.error('Error getting offerings:', error);
+      console.error('Error getting paywall:', error);
       return null;
     }
   },
 
   /**
-   * Purchase a package
+   * Get paywall products
    */
-  async purchasePackage(pkg: PurchasesPackage): Promise<{ success: boolean; isPro: boolean }> {
+  async getPaywallProducts(paywall: AdaptyPaywall): Promise<AdaptyPaywallProduct[]> {
     try {
-      const { customerInfo } = await Purchases.purchasePackage(pkg);
-      const isPro = Boolean(customerInfo.entitlements.active['pro']);
-      return { success: true, isPro };
+      return await adapty.getPaywallProducts(paywall);
+    } catch (error) {
+      console.error('Error getting paywall products:', error);
+      return [];
+    }
+  },
+
+  /**
+   * Purchase a product
+   */
+  async purchaseProduct(
+    product: AdaptyPaywallProduct
+  ): Promise<{ success: boolean; isPro: boolean; cancelled: boolean }> {
+    try {
+      const result = await adapty.makePurchase(product);
+
+      switch (result.type) {
+        case 'success':
+          const isPro = result.profile?.accessLevels?.['premium']?.isActive ?? false;
+          return { success: true, isPro, cancelled: false };
+        case 'user_cancelled':
+          return { success: false, isPro: false, cancelled: true };
+        case 'pending':
+          return { success: false, isPro: false, cancelled: false };
+        default:
+          return { success: false, isPro: false, cancelled: false };
+      }
     } catch (error: any) {
-      if (error.userCancelled) {
-        console.log('User cancelled purchase');
-      } else {
-        console.error('Error purchasing package:', error);
-      }
-      return { success: false, isPro: false };
+      console.error('Error purchasing product:', error);
+      return { success: false, isPro: false, cancelled: false };
     }
   },
 
@@ -105,8 +134,8 @@ export const SubscriptionService = {
    */
   async restorePurchases(): Promise<{ success: boolean; isPro: boolean }> {
     try {
-      const customerInfo = await Purchases.restorePurchases();
-      const isPro = Boolean(customerInfo.entitlements.active['pro']);
+      const profile = await adapty.restorePurchases();
+      const isPro = profile?.accessLevels?.['premium']?.isActive ?? false;
       return { success: true, isPro };
     } catch (error) {
       console.error('Error restoring purchases:', error);
@@ -115,34 +144,18 @@ export const SubscriptionService = {
   },
 
   /**
-   * Login user (for tracking across devices)
+   * Identify user (for tracking across devices)
    */
-  async loginUser(userId: string): Promise<void> {
+  async identifyUser(userId: string): Promise<void> {
     try {
-      const apiKey = process.env.EXPO_PUBLIC_REVENUECAT_API_KEY;
+      const apiKey = process.env.EXPO_PUBLIC_ADAPTY_API_KEY;
       if (!apiKey) {
         return;
       }
 
-      await Purchases.logIn(userId);
+      await adapty.identify(userId);
     } catch (error) {
-      console.error('Error logging in user:', error);
-    }
-  },
-
-  /**
-   * Logout user
-   */
-  async logoutUser(): Promise<void> {
-    try {
-      const apiKey = process.env.EXPO_PUBLIC_REVENUECAT_API_KEY;
-      if (!apiKey) {
-        return;
-      }
-
-      await Purchases.logOut();
-    } catch (error) {
-      console.error('Error logging out user:', error);
+      console.error('Error identifying user:', error);
     }
   },
 
@@ -180,7 +193,7 @@ export const SubscriptionService = {
       await AsyncStorage.setItem(SCAN_COUNT_KEY, newCount.toString());
 
       // Set reset time if not already set
-      if (!await AsyncStorage.getItem(SCAN_RESET_TIME_KEY)) {
+      if (!(await AsyncStorage.getItem(SCAN_RESET_TIME_KEY))) {
         await AsyncStorage.setItem(SCAN_RESET_TIME_KEY, usage.resetTime.toString());
       }
     } catch (error) {
@@ -194,7 +207,10 @@ export const SubscriptionService = {
   async resetScanCount(): Promise<void> {
     try {
       await AsyncStorage.setItem(SCAN_COUNT_KEY, '0');
-      await AsyncStorage.setItem(SCAN_RESET_TIME_KEY, (Date.now() + RESET_INTERVAL_MS).toString());
+      await AsyncStorage.setItem(
+        SCAN_RESET_TIME_KEY,
+        (Date.now() + RESET_INTERVAL_MS).toString()
+      );
     } catch (error) {
       console.error('Error resetting scan count:', error);
     }
@@ -230,5 +246,35 @@ export const SubscriptionService = {
   async getTimeUntilReset(): Promise<number> {
     const usage = await this.getScanUsage();
     return Math.max(0, usage.resetTime - Date.now());
+  },
+
+  /**
+   * Format subscription period for display
+   */
+  formatSubscriptionPeriod(product: AdaptyPaywallProduct): string {
+    const period = product.subscription?.subscriptionPeriod;
+    if (!period) return '';
+
+    const { numberOfUnits, unit } = period;
+
+    // Map unit to display text
+    const unitMap: Record<string, string> = {
+      day: 'day',
+      week: 'week',
+      month: 'month',
+      year: 'year',
+    };
+
+    const unitLabel = unitMap[unit] || unit;
+    const pluralUnit = numberOfUnits === 1 ? unitLabel : `${unitLabel}s`;
+
+    return numberOfUnits === 1 ? `per ${pluralUnit}` : `per ${numberOfUnits} ${pluralUnit}`;
+  },
+
+  /**
+   * Get formatted price
+   */
+  getFormattedPrice(product: AdaptyPaywallProduct): string {
+    return product.price?.localizedString || 'N/A';
   },
 };

@@ -16,9 +16,12 @@ import Animated, {
   useAnimatedStyle,
   withRepeat,
   withSpring,
+  withTiming,
   interpolate,
   Extrapolate,
   SharedValue,
+  Easing,
+  withSequence,
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
@@ -34,77 +37,173 @@ interface OnboardingSlide {
   title: string;
   description: string;
   accentColor: string;
+  gradientColors: string[];
 }
 
 const slides: OnboardingSlide[] = [
   {
     id: '1',
     icon: 'shield-checkmark',
-    title: 'AI-Powered Security Scanning',
-    description: 'Advanced algorithms analyze smart contracts and websites in real-time, detecting scams, honeypots, and malicious patterns before you invest.',
+    title: 'One-Click Protection',
+    description:
+      'Scan any contract or website instantly. Our advanced AI radar detects scams, honeypots, and malicious patterns in seconds.',
     accentColor: colors.primary,
+    gradientColors: [colors.primary, '#00ffd5'],
   },
   {
     id: '2',
-    icon: 'chatbubbles',
-    title: 'Your Personal Security Expert',
-    description: 'Chat with our AI consultant 24/7. Get instant answers about crypto safety, analyze screenshots, and receive expert guidance on any project.',
+    icon: 'scan-circle',
+    title: 'AI Security Consultant',
+    description:
+      'Upload screenshots, chat 24/7, and get expert analysis. Our AI consultant analyzes images to detect social engineering and fraud patterns.',
     accentColor: '#00b8ff',
+    gradientColors: ['#00b8ff', '#0099ff'],
   },
   {
     id: '3',
-    icon: 'bulb',
-    title: 'Knowledge Base & Learning',
-    description: 'Access comprehensive guides on phishing, rug pulls, social engineering, and more. Stay educated and protected in the crypto world.',
+    icon: 'library',
+    title: 'Knowledge Base',
+    description:
+      'Access comprehensive guides on phishing, rug pulls, and crypto security. Stay educated and protected from emerging threats.',
     accentColor: '#ff8c00',
-  },
-  {
-    id: '4',
-    icon: 'checkmark-circle',
-    title: 'Stay Protected',
-    description: 'Receive daily security tips, track your scan history, and get instant alerts about emerging threats in the crypto space.',
-    accentColor: colors.success,
+    gradientColors: ['#ff8c00', '#ffaa33'],
   },
 ];
 
-const PaginationDot = React.memo(({ index, scrollX }: { index: number; scrollX: SharedValue<number> }) => {
-  const dotStyle = useAnimatedStyle(() => {
-    const inputRange = [
-      (index - 1) * width,
-      index * width,
-      (index + 1) * width,
-    ];
+const PaginationDot = React.memo(
+  ({ index, scrollX }: { index: number; scrollX: SharedValue<number> }) => {
+    const dotStyle = useAnimatedStyle(() => {
+      const inputRange = [(index - 1) * width, index * width, (index + 1) * width];
 
-    const dotWidth = interpolate(
-      scrollX.value,
-      inputRange,
-      [8, 24, 8],
-      Extrapolate.CLAMP
+      const dotWidth = interpolate(scrollX.value, inputRange, [10, 32, 10], Extrapolate.CLAMP);
+
+      const opacity = interpolate(scrollX.value, inputRange, [0.3, 1, 0.3], Extrapolate.CLAMP);
+
+      return {
+        width: dotWidth,
+        opacity,
+      };
+    });
+
+    return (
+      <Animated.View style={[styles.dot, dotStyle]}>
+        <LinearGradient
+          colors={[colors.primary, '#00ffd5']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.dotGradient}
+        />
+      </Animated.View>
     );
-
-    const opacity = interpolate(
-      scrollX.value,
-      inputRange,
-      [0.3, 1, 0.3],
-      Extrapolate.CLAMP
-    );
-
-    return {
-      width: dotWidth,
-      opacity,
-    };
-  });
-
-  return <Animated.View style={[styles.dot, dotStyle]} />;
-});
+  }
+);
 
 PaginationDot.displayName = 'PaginationDot';
+
+// Animated Radar Component
+const RadarScanner = () => {
+  const rotation = useSharedValue(0);
+  const pulse1 = useSharedValue(1);
+  const pulse2 = useSharedValue(1);
+  const pulse3 = useSharedValue(1);
+
+  React.useEffect(() => {
+    rotation.value = withRepeat(
+      withTiming(360, { duration: 3000, easing: Easing.linear }),
+      -1,
+      false
+    );
+
+    pulse1.value = withRepeat(
+      withSequence(
+        withTiming(1.4, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
+        withTiming(1, { duration: 0 })
+      ),
+      -1,
+      false
+    );
+
+    pulse2.value = withRepeat(
+      withSequence(
+        withTiming(0, { duration: 0 }),
+        withTiming(0, { duration: 666 }),
+        withTiming(1.4, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
+        withTiming(1, { duration: 0 })
+      ),
+      -1,
+      false
+    );
+
+    pulse3.value = withRepeat(
+      withSequence(
+        withTiming(0, { duration: 0 }),
+        withTiming(0, { duration: 1333 }),
+        withTiming(1.4, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
+        withTiming(1, { duration: 0 })
+      ),
+      -1,
+      false
+    );
+  }, [rotation, pulse1, pulse2, pulse3]);
+
+  const rotationStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${rotation.value}deg` }],
+  }));
+
+  const pulse1Style = useAnimatedStyle(() => ({
+    transform: [{ scale: pulse1.value }],
+    opacity: interpolate(pulse1.value, [1, 1.4], [0.6, 0]),
+  }));
+
+  const pulse2Style = useAnimatedStyle(() => ({
+    transform: [{ scale: pulse2.value }],
+    opacity: interpolate(pulse2.value, [0, 1, 1.4], [0, 0.6, 0]),
+  }));
+
+  const pulse3Style = useAnimatedStyle(() => ({
+    transform: [{ scale: pulse3.value }],
+    opacity: interpolate(pulse3.value, [0, 1, 1.4], [0, 0.6, 0]),
+  }));
+
+  return (
+    <View style={styles.radarContainer}>
+      {/* Pulse rings */}
+      <Animated.View style={[styles.pulseRing, pulse1Style]} />
+      <Animated.View style={[styles.pulseRing, pulse2Style]} />
+      <Animated.View style={[styles.pulseRing, pulse3Style]} />
+
+      {/* Main radar circle */}
+      <View style={styles.radarCircle}>
+        <BlurView intensity={30} tint="dark" style={styles.radarBlur}>
+          <LinearGradient
+            colors={[`${colors.primary}44`, `${colors.primary}11`]}
+            style={styles.radarGradient}
+          >
+            <View style={styles.radarGrid}>
+              <View style={styles.radarLine} />
+              <View style={[styles.radarLine, { transform: [{ rotate: '90deg' }] }]} />
+            </View>
+
+            {/* Rotating scanner beam */}
+            <Animated.View style={[styles.scannerBeam, rotationStyle]} />
+
+            {/* Center icon */}
+            <View style={styles.radarCenter}>
+              <Ionicons name="shield-checkmark" size={40} color={colors.primary} />
+            </View>
+          </LinearGradient>
+        </BlurView>
+      </View>
+    </View>
+  );
+};
 
 export default function OnboardingScreen() {
   const router = useRouter();
   const flatListRef = useRef<FlatList>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const scrollX = useSharedValue(0);
+  const buttonScale = useSharedValue(1);
 
   const handleScroll = (event: any) => {
     scrollX.value = event.nativeEvent.contentOffset.x;
@@ -126,27 +225,26 @@ export default function OnboardingScreen() {
     itemVisiblePercentThreshold: 50,
   }).current;
 
-  const handleNext = () => {
-    if (currentIndex < slides.length - 1) {
-      HapticsService.light();
-      flatListRef.current?.scrollToIndex({
-        index: currentIndex + 1,
-        animated: true,
-      });
-    }
-  };
-
-  const handleSkip = async () => {
-    HapticsService.medium();
-    await AsyncStorage.setItem('@cryptoshield_onboarding_complete', 'true');
-    router.replace('/(tabs)');
-  };
-
   const handleGetStarted = async () => {
-    HapticsService.success();
-    await AsyncStorage.setItem('@cryptoshield_onboarding_complete', 'true');
-    router.replace('/(tabs)');
+    // Heavy haptic feedback with scale animation
+    HapticsService.heavy();
+
+    buttonScale.value = withSequence(
+      withSpring(0.92, { damping: 10, stiffness: 400 }),
+      withSpring(1, { damping: 10, stiffness: 400 })
+    );
+
+    // Add a slight delay for the animation
+    setTimeout(async () => {
+      HapticsService.success();
+      await AsyncStorage.setItem('@cryptoshield_onboarding_complete', 'true');
+      router.replace('/(tabs)');
+    }, 150);
   };
+
+  const buttonAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: buttonScale.value }],
+  }));
 
   const renderSlide = ({ item, index }: { item: OnboardingSlide; index: number }) => {
     return <SlideItem item={item} index={index} scrollX={scrollX} />;
@@ -156,18 +254,16 @@ export default function OnboardingScreen() {
     <View style={styles.container}>
       <StatusBar style="light" />
 
-      {/* Background Gradient */}
+      {/* Background Gradient - Midnight theme */}
       <LinearGradient
-        colors={[colors.background, colors.backgroundSecondary, colors.background]}
+        colors={['#0a0e27', '#0d1b2a', '#0a0e27']}
+        locations={[0, 0.5, 1]}
         style={StyleSheet.absoluteFillObject}
       />
 
-      {/* Skip Button */}
-      {currentIndex < slides.length - 1 && (
-        <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
-          <Text style={styles.skipText}>Skip</Text>
-        </TouchableOpacity>
-      )}
+      {/* Decorative glow effects */}
+      <View style={styles.decorativeGlow1} />
+      <View style={styles.decorativeGlow2} />
 
       {/* Slides */}
       <FlatList
@@ -187,153 +283,133 @@ export default function OnboardingScreen() {
 
       {/* Bottom Section */}
       <View style={styles.bottomSection}>
-        {/* Pagination Dots */}
+        {/* Pagination Dots with glow */}
         <View style={styles.pagination}>
           {slides.map((_, index) => (
             <PaginationDot key={index} index={index} scrollX={scrollX} />
           ))}
         </View>
 
-        {/* Navigation Buttons */}
-        <View style={styles.buttonContainer}>
-          {currentIndex === slides.length - 1 ? (
-            <TouchableOpacity
-              style={styles.getStartedButton}
-              onPress={handleGetStarted}
-            >
+        {/* Get Started Button */}
+        <Animated.View style={buttonAnimatedStyle}>
+          <TouchableOpacity
+            style={styles.getStartedButton}
+            onPress={handleGetStarted}
+            activeOpacity={0.9}
+          >
+            <BlurView intensity={40} tint="dark" style={styles.buttonBlur}>
               <LinearGradient
-                colors={[colors.primary, colors.primaryDark]}
+                colors={[colors.primary, '#00b8ff', colors.primary]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={styles.buttonGradient}
               >
+                <View style={styles.buttonGlow} />
                 <Text style={styles.getStartedText}>Get Started</Text>
-                <Ionicons name="arrow-forward" size={20} color={colors.background} />
+                <Ionicons name="arrow-forward" size={24} color="#0a0e27" />
               </LinearGradient>
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
-              <BlurView intensity={20} tint="dark" style={styles.nextButtonBlur}>
-                <Text style={styles.nextText}>Next</Text>
-                <Ionicons name="arrow-forward" size={20} color={colors.primary} />
-              </BlurView>
-            </TouchableOpacity>
-          )}
-        </View>
+            </BlurView>
+          </TouchableOpacity>
+        </Animated.View>
       </View>
     </View>
   );
 }
 
-const SlideItem = React.memo(({
-  item,
-  index,
-  scrollX,
-}: {
-  item: OnboardingSlide;
-  index: number;
-  scrollX: SharedValue<number>;
-}) => {
-  const pulseAnimation = useSharedValue(1);
+const SlideItem = React.memo(
+  ({
+    item,
+    index,
+    scrollX,
+  }: {
+    item: OnboardingSlide;
+    index: number;
+    scrollX: SharedValue<number>;
+  }) => {
+    const animatedStyle = useAnimatedStyle(() => {
+      const inputRange = [(index - 1) * width, index * width, (index + 1) * width];
 
-  React.useEffect(() => {
-    pulseAnimation.value = withRepeat(
-      withSpring(1.15, {
-        damping: 3,
-        stiffness: 50,
-      }),
-      -1,
-      true
-    );
-  }, [pulseAnimation]);
+      const scale = interpolate(scrollX.value, inputRange, [0.8, 1, 0.8], Extrapolate.CLAMP);
 
-  const animatedStyle = useAnimatedStyle(() => {
-    const inputRange = [(index - 1) * width, index * width, (index + 1) * width];
+      const opacity = interpolate(scrollX.value, inputRange, [0.4, 1, 0.4], Extrapolate.CLAMP);
 
-    const scale = interpolate(
-      scrollX.value,
-      inputRange,
-      [0.85, 1, 0.85],
-      Extrapolate.CLAMP
-    );
+      const translateY = interpolate(scrollX.value, inputRange, [50, 0, 50], Extrapolate.CLAMP);
 
-    const opacity = interpolate(
-      scrollX.value,
-      inputRange,
-      [0.3, 1, 0.3],
-      Extrapolate.CLAMP
-    );
+      return {
+        transform: [{ scale }, { translateY }],
+        opacity,
+      };
+    });
 
-    const translateY = interpolate(
-      scrollX.value,
-      inputRange,
-      [30, 0, 30],
-      Extrapolate.CLAMP
-    );
-
-    return {
-      transform: [{ scale }, { translateY }],
-      opacity,
-    };
-  });
-
-  const iconAnimatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ scale: pulseAnimation.value }],
-    };
-  });
-
-  return (
-    <Animated.View style={[styles.slide, animatedStyle]}>
-      {/* Icon Container with Glassmorphism */}
-      <View style={styles.iconContainer}>
-        <BlurView intensity={40} tint="dark" style={styles.iconBlur}>
-          <Animated.View style={iconAnimatedStyle}>
-            <View style={[styles.iconCircle, { shadowColor: item.accentColor }]}>
+    return (
+      <Animated.View style={[styles.slide, animatedStyle]}>
+        {/* Render radar for first slide, icon for others */}
+        {index === 0 ? (
+          <RadarScanner />
+        ) : (
+          <View style={styles.iconContainer}>
+            <BlurView intensity={50} tint="dark" style={styles.iconBlur}>
               <LinearGradient
-                colors={[`${item.accentColor}33`, `${item.accentColor}11`]}
+                colors={[`${item.accentColor}44`, `${item.accentColor}11`]}
                 style={styles.iconGradient}
               >
-                <Ionicons name={item.icon} size={64} color={item.accentColor} />
+                <View style={[styles.iconGlowRing, { shadowColor: item.accentColor }]} />
+                <Ionicons name={item.icon} size={72} color={item.accentColor} />
               </LinearGradient>
-            </View>
-          </Animated.View>
+            </BlurView>
+          </View>
+        )}
+
+        {/* Content Card with Glassmorphism */}
+        <BlurView intensity={30} tint="dark" style={styles.contentCard}>
+          <LinearGradient
+            colors={['rgba(255, 255, 255, 0.05)', 'rgba(255, 255, 255, 0.02)']}
+            style={styles.contentGradient}
+          >
+            <View style={[styles.accentBar, { backgroundColor: item.accentColor }]} />
+            <Text style={styles.title}>{item.title}</Text>
+            <Text style={styles.description}>{item.description}</Text>
+          </LinearGradient>
         </BlurView>
-      </View>
-
-      {/* Content */}
-      <View style={styles.content}>
-        <Text style={styles.title}>{item.title}</Text>
-        <Text style={styles.description}>{item.description}</Text>
-      </View>
-
-      {/* Decorative Elements */}
-      <View style={styles.decorativeContainer}>
-        <View style={[styles.decorativeLine, { backgroundColor: item.accentColor }]} />
-      </View>
-    </Animated.View>
-  );
-});
+      </Animated.View>
+    );
+  }
+);
 
 SlideItem.displayName = 'SlideItem';
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: '#0a0e27',
   },
-  skipButton: {
+  decorativeGlow1: {
     position: 'absolute',
-    top: spacing.xl + 20,
-    right: spacing.lg,
-    zIndex: 10,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    top: height * 0.2,
+    left: -100,
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    backgroundColor: colors.primary,
+    opacity: 0.1,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 100,
   },
-  skipText: {
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.textSecondary,
+  decorativeGlow2: {
+    position: 'absolute',
+    bottom: height * 0.3,
+    right: -100,
+    width: 250,
+    height: 250,
+    borderRadius: 125,
+    backgroundColor: '#00b8ff',
+    opacity: 0.08,
+    shadowColor: '#00b8ff',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 80,
   },
   slide: {
     width,
@@ -342,66 +418,142 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: spacing.xl,
   },
+  radarContainer: {
+    width: 260,
+    height: 260,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.xxl + spacing.lg,
+  },
+  pulseRing: {
+    position: 'absolute',
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    borderWidth: 2,
+    borderColor: colors.primary,
+  },
+  radarCircle: {
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    overflow: 'hidden',
+  },
+  radarBlur: {
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+  },
+  radarGradient: {
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 3,
+    borderColor: colors.primary,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 30,
+  },
+  radarGrid: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  radarLine: {
+    position: 'absolute',
+    width: '100%',
+    height: 1,
+    backgroundColor: `${colors.primary}44`,
+  },
+  scannerBeam: {
+    position: 'absolute',
+    width: '50%',
+    height: 2,
+    right: '50%',
+    backgroundColor: colors.primary,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 10,
+  },
+  radarCenter: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: `${colors.primary}22`,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: colors.primary,
+  },
   iconContainer: {
-    marginBottom: spacing.xxl,
+    marginBottom: spacing.xxl + spacing.lg,
   },
   iconBlur: {
     borderRadius: borderRadius.full,
     overflow: 'hidden',
   },
-  iconCircle: {
-    width: 180,
-    height: 180,
-    borderRadius: 90,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 30,
-    elevation: 10,
-  },
   iconGradient: {
-    width: 180,
-    height: 180,
-    borderRadius: 90,
+    width: 200,
+    height: 200,
+    borderRadius: 100,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
+    borderWidth: 3,
     borderColor: 'rgba(255, 255, 255, 0.1)',
   },
-  content: {
-    alignItems: 'center',
-    paddingHorizontal: spacing.lg,
+  iconGlowRing: {
+    position: 'absolute',
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 40,
+  },
+  contentCard: {
+    width: width - spacing.xl * 2,
+    borderRadius: borderRadius.xl,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+  },
+  contentGradient: {
+    padding: spacing.xl,
+  },
+  accentBar: {
+    width: 60,
+    height: 4,
+    borderRadius: 2,
+    marginBottom: spacing.lg,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 8,
   },
   title: {
     fontSize: typography.fontSize.huge,
     fontWeight: typography.fontWeight.bold,
     color: colors.text,
-    textAlign: 'center',
     marginBottom: spacing.md,
     lineHeight: 38,
   },
   description: {
     fontSize: typography.fontSize.md,
     color: colors.textSecondary,
-    textAlign: 'center',
     lineHeight: 24,
-    paddingHorizontal: spacing.sm,
-  },
-  decorativeContainer: {
-    position: 'absolute',
-    bottom: height * 0.25,
-    alignItems: 'center',
-  },
-  decorativeLine: {
-    width: 60,
-    height: 4,
-    borderRadius: 2,
-    opacity: 0.3,
   },
   bottomSection: {
     position: 'absolute',
-    bottom: spacing.xxl + 20,
+    bottom: spacing.xxl + 30,
     left: 0,
     right: 0,
     paddingHorizontal: spacing.xl,
@@ -414,47 +566,51 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   dot: {
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.primary,
-  },
-  buttonContainer: {
-    alignItems: 'center',
-  },
-  nextButton: {
-    width: '100%',
-    borderRadius: borderRadius.lg,
+    height: 10,
+    borderRadius: 5,
     overflow: 'hidden',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 8,
   },
-  nextButtonBlur: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.md + 2,
-    gap: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  nextText: {
-    fontSize: typography.fontSize.lg,
-    fontWeight: typography.fontWeight.bold,
-    color: colors.primary,
+  dotGradient: {
+    flex: 1,
   },
   getStartedButton: {
-    width: '100%',
-    borderRadius: borderRadius.lg,
+    borderRadius: borderRadius.xl,
+    overflow: 'hidden',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.5,
+    shadowRadius: 20,
+  },
+  buttonBlur: {
     overflow: 'hidden',
   },
   buttonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: spacing.md + 2,
-    gap: spacing.sm,
+    paddingVertical: spacing.lg + 4,
+    gap: spacing.md,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    position: 'relative',
+  },
+  buttonGlow: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'white',
+    opacity: 0.1,
   },
   getStartedText: {
-    fontSize: typography.fontSize.lg,
+    fontSize: typography.fontSize.xl,
     fontWeight: typography.fontWeight.bold,
-    color: colors.background,
+    color: '#0a0e27',
+    textShadowColor: 'rgba(255, 255, 255, 0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
 });
