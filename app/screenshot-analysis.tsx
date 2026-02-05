@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   ScrollView,
   Image,
   Alert,
@@ -17,6 +16,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { colors, spacing, borderRadius, typography } from '@/constants/theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useImageAnalysis } from '@fastshot/ai';
+import { AnimatedIconButton, AnimatedButton, AnimatedPressable } from '@/components/AnimatedPressable';
 
 export default function ScreenshotAnalysis() {
   const router = useRouter();
@@ -235,9 +235,9 @@ export default function ScreenshotAnalysis() {
 
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+        <AnimatedIconButton style={styles.backButton} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
+        </AnimatedIconButton>
         <Text style={styles.headerTitle}>Screenshot Analysis</Text>
         <View style={{ width: 40 }} />
       </View>
@@ -298,12 +298,15 @@ export default function ScreenshotAnalysis() {
                 </View>
 
                 {isPro ? (
-                  <TouchableOpacity
-                    style={[
-                      styles.deepAnalysisToggle,
-                      useDeepAnalysis && styles.deepAnalysisToggleActive,
-                    ]}
+                  <AnimatedPressable
+                    style={
+                      useDeepAnalysis
+                        ? [styles.deepAnalysisToggle, styles.deepAnalysisToggleActive]
+                        : styles.deepAnalysisToggle
+                    }
                     onPress={() => setUseDeepAnalysis(!useDeepAnalysis)}
+                    scaleOnPress={0.94}
+                    hapticType="selection"
                   >
                     <View
                       style={[
@@ -311,14 +314,16 @@ export default function ScreenshotAnalysis() {
                         useDeepAnalysis && styles.deepAnalysisToggleThumbActive,
                       ]}
                     />
-                  </TouchableOpacity>
+                  </AnimatedPressable>
                 ) : (
-                  <TouchableOpacity
+                  <AnimatedPressable
                     style={styles.upgradeButtonSmall}
                     onPress={() => router.push('/premium')}
+                    scaleOnPress={0.94}
+                    hapticType="medium"
                   >
                     <Text style={styles.upgradeButtonSmallText}>Upgrade</Text>
-                  </TouchableOpacity>
+                  </AnimatedPressable>
                 )}
               </View>
             </LinearGradient>
@@ -328,32 +333,38 @@ export default function ScreenshotAnalysis() {
         {/* Image Selection Buttons */}
         {!selectedImage && (
           <View style={styles.actionsContainer}>
-            <TouchableOpacity
-              style={styles.actionButton}
+            <AnimatedButton
               onPress={pickImage}
               disabled={isLoading}
+              scaleOnPress={0.97}
+              hapticType="medium"
             >
-              <LinearGradient
-                colors={[colors.primary, colors.primaryDark]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.actionButtonGradient}
-              >
-                <Ionicons name="image" size={32} color={colors.background} />
-                <Text style={styles.actionButtonText}>Choose from Library</Text>
-              </LinearGradient>
-            </TouchableOpacity>
+              <View style={styles.actionButton}>
+                <LinearGradient
+                  colors={[colors.primary, colors.primaryDark]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.actionButtonGradient}
+                >
+                  <Ionicons name="image" size={32} color={colors.background} />
+                  <Text style={styles.actionButtonText}>Choose from Library</Text>
+                </LinearGradient>
+              </View>
+            </AnimatedButton>
 
-            <TouchableOpacity
-              style={styles.actionButton}
+            <AnimatedButton
               onPress={takePhoto}
               disabled={isLoading}
+              scaleOnPress={0.97}
+              hapticType="medium"
             >
-              <View style={styles.actionButtonOutline}>
-                <Ionicons name="camera" size={32} color={colors.primary} />
-                <Text style={styles.actionButtonTextOutline}>Take Photo</Text>
+              <View style={styles.actionButton}>
+                <View style={styles.actionButtonOutline}>
+                  <Ionicons name="camera" size={32} color={colors.primary} />
+                  <Text style={styles.actionButtonTextOutline}>Take Photo</Text>
+                </View>
               </View>
-            </TouchableOpacity>
+            </AnimatedButton>
           </View>
         )}
 
@@ -361,14 +372,15 @@ export default function ScreenshotAnalysis() {
         {selectedImage && (
           <View style={styles.imageContainer}>
             <Image source={{ uri: selectedImage }} style={styles.selectedImage} />
-            <TouchableOpacity
+            <AnimatedIconButton
               style={styles.changeImageButton}
               onPress={() => {
                 setSelectedImage(null);
               }}
+              scaleOnPress={0.9}
             >
               <Ionicons name="close-circle" size={24} color={colors.text} />
-            </TouchableOpacity>
+            </AnimatedIconButton>
           </View>
         )}
 
@@ -417,25 +429,33 @@ export default function ScreenshotAnalysis() {
 
             {/* Action Buttons */}
             <View style={styles.actionButtonsContainer}>
-              <TouchableOpacity
-                style={styles.analyzeAnotherButton}
+              <AnimatedButton
                 onPress={() => setSelectedImage(null)}
+                scaleOnPress={0.97}
               >
-                <Text style={styles.analyzeAnotherText}>Analyze Another</Text>
-              </TouchableOpacity>
+                <View style={styles.analyzeAnotherButton}>
+                  <Text style={styles.analyzeAnotherText}>Analyze Another</Text>
+                </View>
+              </AnimatedButton>
 
               {riskLevel === 'danger' && (
-                <TouchableOpacity style={styles.reportButton}>
-                  <LinearGradient
-                    colors={[colors.danger, colors.dangerDark]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={styles.reportButtonGradient}
-                  >
-                    <Ionicons name="flag" size={20} color={colors.text} />
-                    <Text style={styles.reportButtonText}>Report Scam</Text>
-                  </LinearGradient>
-                </TouchableOpacity>
+                <AnimatedButton
+                  onPress={() => {}}
+                  scaleOnPress={0.97}
+                  hapticType="warning"
+                >
+                  <View style={styles.reportButton}>
+                    <LinearGradient
+                      colors={[colors.danger, colors.dangerDark]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={styles.reportButtonGradient}
+                    >
+                      <Ionicons name="flag" size={20} color={colors.text} />
+                      <Text style={styles.reportButtonText}>Report Scam</Text>
+                    </LinearGradient>
+                  </View>
+                </AnimatedButton>
               )}
             </View>
           </View>
@@ -447,12 +467,14 @@ export default function ScreenshotAnalysis() {
             <Ionicons name="alert-circle" size={48} color={colors.danger} />
             <Text style={styles.errorText}>Analysis Failed</Text>
             <Text style={styles.errorSubtext}>{error.message}</Text>
-            <TouchableOpacity
-              style={styles.retryButton}
+            <AnimatedButton
               onPress={() => selectedImage && pickImage()}
+              scaleOnPress={0.97}
             >
-              <Text style={styles.retryButtonText}>Try Again</Text>
-            </TouchableOpacity>
+              <View style={styles.retryButton}>
+                <Text style={styles.retryButtonText}>Try Again</Text>
+              </View>
+            </AnimatedButton>
           </View>
         )}
 

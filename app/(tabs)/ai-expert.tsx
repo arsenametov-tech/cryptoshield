@@ -1,11 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, spacing, borderRadius, typography } from '@/constants/theme';
-import { HapticsService } from '@/services/haptics';
+import { AnimatedCard } from '@/components/AnimatedPressable';
 
 export default function AIExpert() {
   const router = useRouter();
@@ -31,52 +31,56 @@ export default function AIExpert() {
         {/* Action Cards */}
         <View style={styles.cardsContainer}>
           {/* Analyze Screenshot Card */}
-          <TouchableOpacity
-            style={styles.actionCard}
+          <AnimatedCard
             onPress={() => {
-              HapticsService.medium();
               router.push('/screenshot-analysis');
             }}
+            scaleOnPress={0.97}
+            hapticType="medium"
           >
-            <LinearGradient
-              colors={[`${colors.primary}11`, 'transparent']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.cardGradient}
-            >
-              <View style={styles.cardIcon}>
-                <Ionicons name="image" size={48} color={colors.primary} />
-              </View>
-              <Text style={styles.cardTitle}>Analyze Screenshot</Text>
-              <Text style={styles.cardDescription}>
-                Upload chats, ads, or whitepapers. Newell Vision detects red flags.
-              </Text>
-            </LinearGradient>
-          </TouchableOpacity>
+            <View style={styles.actionCard}>
+              <LinearGradient
+                colors={[`${colors.primary}11`, 'transparent']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.cardGradient}
+              >
+                <View style={styles.cardIcon}>
+                  <Ionicons name="image" size={48} color={colors.primary} />
+                </View>
+                <Text style={styles.cardTitle}>Analyze Screenshot</Text>
+                <Text style={styles.cardDescription}>
+                  Upload chats, ads, or whitepapers. Newell Vision detects red flags.
+                </Text>
+              </LinearGradient>
+            </View>
+          </AnimatedCard>
 
           {/* Ask AI Consultant Card */}
-          <TouchableOpacity
-            style={styles.actionCard}
+          <AnimatedCard
             onPress={() => {
-              HapticsService.medium();
               router.push('/ai-consultant');
             }}
+            scaleOnPress={0.97}
+            hapticType="medium"
           >
-            <LinearGradient
-              colors={[`${colors.primary}11`, 'transparent']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.cardGradient}
-            >
-              <View style={styles.cardIcon}>
-                <Ionicons name="chatbubbles" size={48} color={colors.primary} />
-              </View>
-              <Text style={styles.cardTitle}>Ask AI Consultant</Text>
-              <Text style={styles.cardDescription}>
-                Unsure about a project? Chat with Newell AI about crypto risks.
-              </Text>
-            </LinearGradient>
-          </TouchableOpacity>
+            <View style={styles.actionCard}>
+              <LinearGradient
+                colors={[`${colors.primary}11`, 'transparent']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.cardGradient}
+              >
+                <View style={styles.cardIcon}>
+                  <Ionicons name="chatbubbles" size={48} color={colors.primary} />
+                </View>
+                <Text style={styles.cardTitle}>Ask AI Consultant</Text>
+                <Text style={styles.cardDescription}>
+                  Unsure about a project? Chat with Newell AI about crypto risks.
+                </Text>
+              </LinearGradient>
+            </View>
+          </AnimatedCard>
         </View>
 
         {/* Info Banner */}

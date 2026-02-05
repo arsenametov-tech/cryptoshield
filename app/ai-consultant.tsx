@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   TextInput,
   ScrollView,
   KeyboardAvoidingView,
@@ -18,6 +17,7 @@ import { useTextGeneration } from '@fastshot/ai';
 import { HapticsService } from '@/services/haptics';
 import { MessageSkeleton } from '@/components/SkeletonLoader';
 import { ShimmerBadge } from '@/components/ShimmerBadge';
+import { AnimatedIconButton } from '@/components/AnimatedPressable';
 
 interface Message {
   id: string;
@@ -163,15 +163,14 @@ Please provide a helpful security-focused response.`;
 
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
+        <AnimatedIconButton
           style={styles.backButton}
           onPress={() => {
-            HapticsService.light();
             router.back();
           }}
         >
           <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
+        </AnimatedIconButton>
 
         <View style={styles.headerCenter}>
           <View style={styles.aiIndicator}>
@@ -247,20 +246,23 @@ Please provide a helpful security-focused response.`;
             editable={!isLoading}
           />
 
-          <TouchableOpacity
-            style={[
-              styles.sendButton,
-              (!inputText.trim() || isLoading) && styles.sendButtonDisabled,
-            ]}
+          <AnimatedIconButton
+            style={
+              (!inputText.trim() || isLoading)
+                ? [styles.sendButton, styles.sendButtonDisabled]
+                : styles.sendButton
+            }
             onPress={handleSend}
             disabled={!inputText.trim() || isLoading}
+            scaleOnPress={0.9}
+            hapticType="medium"
           >
             <Ionicons
               name="send"
               size={20}
               color={!inputText.trim() || isLoading ? colors.textMuted : colors.background}
             />
-          </TouchableOpacity>
+          </AnimatedIconButton>
         </View>
       </View>
     </KeyboardAvoidingView>

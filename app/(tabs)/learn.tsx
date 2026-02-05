@@ -1,11 +1,12 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, spacing, borderRadius, typography } from '@/constants/theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { AnimatedCard, AnimatedButton } from '@/components/AnimatedPressable';
 
 interface ScamType {
   id: string;
@@ -91,28 +92,31 @@ export default function Learn() {
         showsVerticalScrollIndicator={false}
       >
         {/* Security Checklist Card */}
-        <TouchableOpacity
-          style={styles.checklistCard}
+        <AnimatedButton
           onPress={() => router.push('/security-checklist')}
+          scaleOnPress={0.97}
+          hapticType="medium"
         >
-          <LinearGradient
-            colors={[colors.primary, colors.primaryDark]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.checklistGradient}
-          >
-            <View style={styles.checklistIcon}>
-              <Ionicons name="checkmark-done-circle" size={32} color={colors.text} />
-            </View>
-            <View style={styles.checklistContent}>
-              <Text style={styles.checklistTitle}>Security Checklist</Text>
-              <Text style={styles.checklistDescription}>
-                Interactive manual verification tool
-              </Text>
-            </View>
-            <Ionicons name="arrow-forward" size={24} color={colors.text} />
-          </LinearGradient>
-        </TouchableOpacity>
+          <View style={styles.checklistCard}>
+            <LinearGradient
+              colors={[colors.primary, colors.primaryDark]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.checklistGradient}
+            >
+              <View style={styles.checklistIcon}>
+                <Ionicons name="checkmark-done-circle" size={32} color={colors.text} />
+              </View>
+              <View style={styles.checklistContent}>
+                <Text style={styles.checklistTitle}>Security Checklist</Text>
+                <Text style={styles.checklistDescription}>
+                  Interactive manual verification tool
+                </Text>
+              </View>
+              <Ionicons name="arrow-forward" size={24} color={colors.text} />
+            </LinearGradient>
+          </View>
+        </AnimatedButton>
 
         {/* Scam Library Section */}
         <View style={styles.section}>
@@ -123,10 +127,11 @@ export default function Learn() {
 
           <View style={styles.scamGrid}>
             {SCAM_TYPES.map((scam) => (
-              <TouchableOpacity
+              <AnimatedCard
                 key={scam.id}
                 style={styles.scamCard}
                 onPress={() => router.push(`/learn/${scam.id}` as any)}
+                scaleOnPress={0.98}
               >
                 <View style={[styles.scamIconContainer, { backgroundColor: scam.color + '20' }]}>
                   <Ionicons name={scam.icon} size={32} color={scam.color} />
@@ -139,7 +144,7 @@ export default function Learn() {
                   </Text>
                   <Ionicons name="chevron-forward" size={16} color={scam.color} />
                 </View>
-              </TouchableOpacity>
+              </AnimatedCard>
             ))}
           </View>
         </View>

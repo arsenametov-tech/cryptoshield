@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   TextInput,
   ScrollView,
   Dimensions,
@@ -28,6 +27,7 @@ import { useTextGeneration } from '@fastshot/ai';
 import { HapticsService } from '@/services/haptics';
 import { ShimmerBadge } from '@/components/ShimmerBadge';
 import { SkeletonLoader } from '@/components/SkeletonLoader';
+import { AnimatedPressable, AnimatedCard, AnimatedIconButton, AnimatedButton } from '@/components/AnimatedPressable';
 
 const { width } = Dimensions.get('window');
 const RADAR_SIZE = width * 0.6;
@@ -245,27 +245,27 @@ export default function Dashboard() {
         </View>
         <View style={styles.headerRight}>
           {!isPro && (
-            <TouchableOpacity
+            <AnimatedPressable
               onPress={() => {
-                HapticsService.medium();
                 router.push('/premium');
               }}
+              hapticType="medium"
+              scaleOnPress={0.95}
             >
               <ShimmerBadge text="Pro" icon="star" compact />
-            </TouchableOpacity>
+            </AnimatedPressable>
           )}
           {isPro && (
             <ShimmerBadge text="Pro" icon="shield-checkmark" compact />
           )}
-          <TouchableOpacity
+          <AnimatedIconButton
             style={styles.settingsButton}
             onPress={() => {
-              HapticsService.light();
               router.push('/settings');
             }}
           >
             <Ionicons name="settings-outline" size={24} color={colors.text} />
-          </TouchableOpacity>
+          </AnimatedIconButton>
         </View>
       </View>
 
@@ -277,9 +277,9 @@ export default function Dashboard() {
             <Text style={styles.scanCounterText}>
               {scansRemaining} {scansRemaining === 1 ? 'scan' : 'scans'} remaining today
             </Text>
-            <TouchableOpacity onPress={() => router.push('/premium')}>
+            <AnimatedPressable onPress={() => router.push('/premium')} scaleOnPress={0.94}>
               <Text style={styles.scanCounterUpgrade}>Upgrade</Text>
-            </TouchableOpacity>
+            </AnimatedPressable>
           </BlurView>
         </View>
       )}
@@ -321,15 +321,17 @@ export default function Dashboard() {
 
           {/* Tap to Scan */}
           <Animated.View style={scanButtonAnimatedStyle}>
-            <TouchableOpacity
+            <AnimatedButton
               style={styles.scanButton}
               onPress={handleScan}
               disabled={isScanning || (!contractAddress.trim() && !websiteUrl.trim())}
+              scaleOnPress={0.94}
+              hapticType="heavy"
             >
               <Text style={styles.scanButtonText}>
                 {isScanning ? 'SCANNING...' : 'TAP TO SCAN'}
               </Text>
-            </TouchableOpacity>
+            </AnimatedButton>
           </Animated.View>
         </View>
 
@@ -373,13 +375,20 @@ export default function Dashboard() {
             </View>
           </View>
 
-          <BlurView intensity={30} tint="dark" style={styles.tipCard}>
-            <LinearGradient
-              colors={[`${colors.primary}22`, `${colors.primary}08`, 'transparent']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.tipGradient}
-            >
+          <AnimatedCard
+            onPress={() => {
+              // Optional: Add action when tapping tip card
+            }}
+            disabled={isLoadingTip}
+            scaleOnPress={0.985}
+          >
+            <BlurView intensity={30} tint="dark" style={styles.tipCard}>
+              <LinearGradient
+                colors={[`${colors.primary}22`, `${colors.primary}08`, 'transparent']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.tipGradient}
+              >
               <View style={styles.tipHeader}>
                 <View style={styles.tipIconContainer}>
                   <LinearGradient
@@ -415,7 +424,8 @@ export default function Dashboard() {
               {/* Decorative gradient border */}
               <View style={styles.tipBorderGlow} />
             </LinearGradient>
-          </BlurView>
+            </BlurView>
+          </AnimatedCard>
         </View>
 
         {/* Recent Checks */}
@@ -424,7 +434,7 @@ export default function Dashboard() {
 
           <View style={styles.recentChecksGrid}>
             {RECENT_CHECKS.map((check) => (
-              <TouchableOpacity
+              <AnimatedCard
                 key={check.id}
                 style={[
                   styles.recentCheckCard,
@@ -449,7 +459,7 @@ export default function Dashboard() {
                 >
                   {check.score}
                 </Text>
-              </TouchableOpacity>
+              </AnimatedCard>
             ))}
           </View>
         </View>

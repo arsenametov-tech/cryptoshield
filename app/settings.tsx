@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   ScrollView,
   Switch,
   Alert,
@@ -20,6 +19,7 @@ import { StorageService, UserPreferences } from '@/services/storage';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import { HapticsService } from '@/services/haptics';
+import { AnimatedIconButton, AnimatedCard, AnimatedButton, AnimatedPressable } from '@/components/AnimatedPressable';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -126,9 +126,9 @@ export default function SettingsScreen() {
 
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+        <AnimatedIconButton style={styles.backButton} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
+        </AnimatedIconButton>
         <Text style={styles.headerTitle}>Settings</Text>
         <View style={{ width: 40 }} />
       </View>
@@ -163,23 +163,24 @@ export default function SettingsScreen() {
                       placeholderTextColor={colors.textMuted}
                       autoFocus
                     />
-                    <TouchableOpacity onPress={handleSaveName}>
+                    <AnimatedIconButton onPress={handleSaveName} scaleOnPress={0.92}>
                       <Ionicons name="checkmark-circle" size={24} color={colors.primary} />
-                    </TouchableOpacity>
+                    </AnimatedIconButton>
                   </View>
                 ) : (
-                  <TouchableOpacity
+                  <AnimatedPressable
                     style={styles.nameContainer}
                     onPress={() => {
                       setTempName(preferences.userName || '');
                       setIsEditingName(true);
                     }}
+                    scaleOnPress={0.98}
                   >
                     <Text style={styles.userName}>
                       {preferences.userName || 'Set Your Name'}
                     </Text>
                     <Ionicons name="pencil" size={16} color={colors.textSecondary} />
-                  </TouchableOpacity>
+                  </AnimatedPressable>
                 )}
                 <View style={styles.userRoleContainer}>
                   <Text style={styles.userRole}>
@@ -201,7 +202,7 @@ export default function SettingsScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Subscription</Text>
 
-            <TouchableOpacity onPress={() => router.push('/premium')}>
+            <AnimatedCard onPress={() => router.push('/premium')} scaleOnPress={0.98} hapticType="medium">
               <BlurView intensity={20} tint="dark" style={styles.upgradeCard}>
                 <LinearGradient
                   colors={[`${colors.primary}22`, 'transparent']}
@@ -223,7 +224,7 @@ export default function SettingsScreen() {
                   </View>
                 </LinearGradient>
               </BlurView>
-            </TouchableOpacity>
+            </AnimatedCard>
           </View>
         )}
 
@@ -281,7 +282,7 @@ export default function SettingsScreen() {
           <Text style={styles.sectionTitle}>Data Management</Text>
 
           <BlurView intensity={20} tint="dark" style={styles.card}>
-            <TouchableOpacity style={styles.actionRow} onPress={handleClearHistory}>
+            <AnimatedPressable style={styles.actionRow} onPress={handleClearHistory} scaleOnPress={0.98}>
               <View style={styles.settingLeft}>
                 <View style={[styles.iconWrapper, { backgroundColor: `${colors.danger}22` }]}>
                   <Ionicons name="trash" size={20} color={colors.danger} />
@@ -294,11 +295,11 @@ export default function SettingsScreen() {
                 </View>
               </View>
               <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-            </TouchableOpacity>
+            </AnimatedPressable>
 
             <View style={styles.divider} />
 
-            <TouchableOpacity style={styles.actionRow} onPress={handleResetOnboarding}>
+            <AnimatedPressable style={styles.actionRow} onPress={handleResetOnboarding} scaleOnPress={0.98}>
               <View style={styles.settingLeft}>
                 <View style={[styles.iconWrapper, { backgroundColor: `${colors.warning}22` }]}>
                   <Ionicons name="refresh" size={20} color={colors.warning} />
@@ -311,7 +312,7 @@ export default function SettingsScreen() {
                 </View>
               </View>
               <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-            </TouchableOpacity>
+            </AnimatedPressable>
           </BlurView>
         </View>
 
@@ -320,7 +321,7 @@ export default function SettingsScreen() {
           <Text style={styles.sectionTitle}>About</Text>
 
           <BlurView intensity={20} tint="dark" style={styles.card}>
-            <TouchableOpacity style={styles.actionRow} onPress={() => setShowAbout(true)}>
+            <AnimatedPressable style={styles.actionRow} onPress={() => setShowAbout(true)} scaleOnPress={0.98}>
               <View style={styles.settingLeft}>
                 <View style={[styles.iconWrapper, { backgroundColor: `${colors.primary}22` }]}>
                   <Ionicons name="information-circle" size={20} color={colors.primary} />
@@ -333,7 +334,7 @@ export default function SettingsScreen() {
                 </View>
               </View>
               <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-            </TouchableOpacity>
+            </AnimatedPressable>
           </BlurView>
         </View>
 
@@ -386,12 +387,14 @@ export default function SettingsScreen() {
                 </Text>
               </View>
 
-              <TouchableOpacity
-                style={styles.closeButton}
+              <AnimatedButton
                 onPress={() => setShowAbout(false)}
+                scaleOnPress={0.96}
               >
-                <Text style={styles.closeButtonText}>Close</Text>
-              </TouchableOpacity>
+                <View style={styles.closeButton}>
+                  <Text style={styles.closeButtonText}>Close</Text>
+                </View>
+              </AnimatedButton>
             </View>
           </BlurView>
         </View>

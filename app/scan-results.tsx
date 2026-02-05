@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   ScrollView,
   Dimensions,
 } from 'react-native';
@@ -22,6 +21,7 @@ import { colors, spacing, borderRadius, typography } from '@/constants/theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StorageService } from '@/services/storage';
 import { HapticsService } from '@/services/haptics';
+import { AnimatedIconButton, AnimatedButton } from '@/components/AnimatedPressable';
 
 const { width } = Dimensions.get('window');
 const GAUGE_SIZE = width * 0.55;
@@ -249,12 +249,12 @@ export default function ScanResults() {
 
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
-        <TouchableOpacity
+        <AnimatedIconButton
           style={styles.backButton}
           onPress={() => router.back()}
         >
           <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
+        </AnimatedIconButton>
         <Text style={styles.headerTitle}>Scan Result</Text>
         <View style={{ width: 40 }} />
       </View>
@@ -347,17 +347,26 @@ export default function ScanResults() {
 
         {/* Action Button */}
         {riskScore >= 70 && (
-          <TouchableOpacity style={styles.blockButton}>
-            <LinearGradient
-              colors={[colors.danger, colors.dangerDark]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.blockButtonGradient}
-            >
-              <Ionicons name="ban" size={20} color={colors.text} />
-              <Text style={styles.blockButtonText}>BLOCK & DELETE</Text>
-            </LinearGradient>
-          </TouchableOpacity>
+          <AnimatedButton
+            onPress={() => {
+              HapticsService.warning();
+              // Handle block action
+            }}
+            scaleOnPress={0.96}
+            hapticType="warning"
+          >
+            <View style={styles.blockButton}>
+              <LinearGradient
+                colors={[colors.danger, colors.dangerDark]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.blockButtonGradient}
+              >
+                <Ionicons name="ban" size={20} color={colors.text} />
+                <Text style={styles.blockButtonText}>BLOCK & DELETE</Text>
+              </LinearGradient>
+            </View>
+          </AnimatedButton>
         )}
       </ScrollView>
     </View>

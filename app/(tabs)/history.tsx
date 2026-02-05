@@ -1,11 +1,13 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, Alert } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { colors, spacing, borderRadius, typography } from '@/constants/theme';
 import { StorageService, ScanHistoryItem } from '@/services/storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { AnimatedCard, AnimatedIconButton } from '@/components/AnimatedPressable';
+import { HapticsService } from '@/services/haptics';
 
 export default function History() {
   const router = useRouter();
@@ -28,15 +30,21 @@ export default function History() {
   );
 
   const handleClearHistory = () => {
+    HapticsService.warning();
     Alert.alert(
       'Clear History',
       'Are you sure you want to clear all scan history? This cannot be undone.',
       [
-        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Cancel',
+          style: 'cancel',
+          onPress: () => HapticsService.light(),
+        },
         {
           text: 'Clear',
           style: 'destructive',
           onPress: async () => {
+            HapticsService.success();
             await StorageService.clearHistory();
             setHistory([]);
           },
@@ -101,12 +109,13 @@ export default function History() {
   };
 
   const renderItem = ({ item }: { item: ScanHistoryItem }) => (
-    <TouchableOpacity
+    <AnimatedCard
       style={styles.historyCard}
       onPress={() => router.push({
         pathname: '/scan-results',
         params: { address: item.address, fromHistory: 'true' },
       })}
+      scaleOnPress={0.98}
     >
       <View style={styles.cardLeft}>
         <View style={[styles.statusIcon, { backgroundColor: getStatusColor(item.status) + '20' }]}>
@@ -139,7 +148,7 @@ export default function History() {
           </Text>
         </View>
       </View>
-    </TouchableOpacity>
+    </AnimatedCard>
   );
 
   return (
@@ -155,9 +164,9 @@ export default function History() {
           </Text>
         </View>
         {history.length > 0 && (
-          <TouchableOpacity style={styles.clearButton} onPress={handleClearHistory}>
+          <AnimatedIconButton style={styles.clearButton} onPress={handleClearHistory} hapticType="warning">
             <Ionicons name="trash-outline" size={20} color={colors.danger} />
-          </TouchableOpacity>
+          </AnimatedIconButton>
         )}
       </View>
 
