@@ -552,6 +552,9 @@ export default function PremiumScreen() {
             <Text style={styles.errorText}>
               Subscription options are not available at the moment.
             </Text>
+            <Text style={[styles.errorText, { marginTop: spacing.md, color: colors.primary }]}>
+              Have a promo code? Use it below to unlock premium features.
+            </Text>
             <TouchableOpacity style={styles.retryButton} onPress={loadPaywall}>
               <Text style={styles.retryButtonText}>Retry</Text>
             </TouchableOpacity>
