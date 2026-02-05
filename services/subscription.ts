@@ -6,6 +6,7 @@ import type {
   AdaptyPurchaseResult,
 } from 'react-native-adapty';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { PromoCodeService } from './promoCode';
 
 const SCAN_COUNT_KEY = '@cryptoshield_scan_count';
 const SCAN_RESET_TIME_KEY = '@cryptoshield_scan_reset_time';
@@ -39,10 +40,17 @@ export const SubscriptionService = {
   },
 
   /**
-   * Check if user has Pro subscription
+   * Check if user has Pro subscription (via Adapty or promo code)
    */
   async isPro(): Promise<boolean> {
     try {
+      // First check promo code unlock
+      const hasPromo = await PromoCodeService.hasPromoUnlock();
+      if (hasPromo) {
+        return true;
+      }
+
+      // Then check Adapty subscription
       const apiKey = process.env.EXPO_PUBLIC_ADAPTY_API_KEY;
       if (!apiKey) {
         return false;
@@ -217,7 +225,7 @@ export const SubscriptionService = {
   },
 
   /**
-   * Check if user can scan (Pro user or has scans remaining)
+   * Check if user can scan (Pro user via Adapty or promo, or has scans remaining)
    */
   async canScan(): Promise<{ canScan: boolean; scansRemaining: number; isPro: boolean }> {
     const isPro = await this.isPro();

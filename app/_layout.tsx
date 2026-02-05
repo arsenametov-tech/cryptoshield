@@ -6,6 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { View, ActivityIndicator, Text } from 'react-native';
 import { colors } from '@/constants/theme';
 import { SubscriptionService } from '@/services/subscription';
+import { i18n } from '@/services/i18n';
 
 export default function RootLayout() {
   const [isLoading, setIsLoading] = useState(true);
@@ -19,6 +20,8 @@ export default function RootLayout() {
   }, []);
 
   const initializeApp = async () => {
+    // Initialize i18n
+    await i18n.init();
     await checkOnboarding();
     // Initialize RevenueCat
     await SubscriptionService.initialize();
@@ -65,7 +68,7 @@ export default function RootLayout() {
           }}>
             <ActivityIndicator size="large" color={colors.primary} />
           </View>
-          <Text style={{ color: colors.textSecondary, fontSize: 16 }}>Loading Cryptoshield...</Text>
+          <Text style={{ color: colors.textSecondary, fontSize: 16 }}>Загрузка Cryptoshield...</Text>
         </View>
       </View>
     );

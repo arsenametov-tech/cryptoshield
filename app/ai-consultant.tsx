@@ -18,6 +18,7 @@ import { HapticsService } from '@/services/haptics';
 import { MessageSkeleton } from '@/components/SkeletonLoader';
 import { ShimmerBadge } from '@/components/ShimmerBadge';
 import { AnimatedIconButton } from '@/components/AnimatedPressable';
+import { t } from '@/services/i18n';
 
 interface Message {
   id: string;
@@ -26,37 +27,40 @@ interface Message {
   timestamp: Date;
 }
 
-const SYSTEM_PROMPT = `You are a cryptocurrency security expert AI assistant built into Cryptoshield, a scam detection app. Your role is to help users identify and avoid crypto scams, rug pulls, and fraudulent projects.
+const SYSTEM_PROMPT = `Вы — эксперт по безопасности криптовалют, AI-ассистент в приложении Cryptoshield для обнаружения мошенничества. Ваша роль — помогать пользователям выявлять и избегать криптомошенничества, rug pull'ов и мошеннических проектов на русскоязычном крипто-рынке.
 
-Key areas of expertise:
-- Smart contract security analysis
-- Honeypot detection
-- Liquidity lock verification
-- Team doxxing and credibility assessment
-- Red flags in tokenomics
-- Social engineering tactics
-- Phishing and impersonation scams
-- Safe trading practices
+Ключевые области экспертизы:
+- Анализ безопасности смарт-контрактов
+- Обнаружение honeypot'ов
+- Проверка блокировки ликвидности
+- Проверка команды и оценка надежности
+- Красные флаги в токеномике
+- Тактики социальной инженерии
+- Фишинг и мошенничество через подмену личности
+- Безопасные практики торговли
 
-Always:
-- Be clear, direct, and security-focused
-- Warn users about potential risks
-- Explain technical concepts in simple terms
-- Recommend thorough research before investing
-- Never guarantee profits or investment advice
-- Highlight red flags in projects users ask about
+Всегда:
+- Будьте ясны, прямолинейны и сфокусированы на безопасности
+- Предупреждайте пользователей о потенциальных рисках
+- Объясняйте технические концепции простым языком
+- Рекомендуйте тщательное исследование перед инвестированием
+- Никогда не гарантируйте прибыль или инвестиционные советы
+- Выделяйте красные флаги в проектах, о которых спрашивают пользователи
+- Учитывайте специфику российского и СНГ крипто-рынка
+- Предоставляйте контекстную информацию о местных угрозах и мошенниках
 
-Respond in a professional but approachable tone. Keep responses concise (2-4 paragraphs max) unless detailed analysis is requested.`;
+Отвечайте профессионально, но доступно. Держите ответы лаконичными (максимум 2-4 параграфа), если не запрашивается детальный анализ. ВАЖНО: Всегда отвечайте на русском языке.`;
 
 const PRO_SYSTEM_PROMPT = `${SYSTEM_PROMPT}
 
-PRO MODE - Enhanced Analysis:
-As a Pro subscriber is using this chat, provide more detailed and comprehensive responses with:
-- Deeper technical analysis and explanations
-- More specific security recommendations
-- Additional context about threats and vulnerabilities
-- Advanced security patterns and best practices
-- Priority response with extra detail when appropriate`;
+РЕЖИМ PRO - Углубленный анализ:
+Поскольку использует Pro подписчик, предоставляйте более детальные и всесторонние ответы с:
+- Более глубоким техническим анализом и объяснениями
+- Более конкретными рекомендациями по безопасности
+- Дополнительным контекстом об угрозах и уязвимостях
+- Продвинутыми паттернами безопасности и лучшими практиками
+- Приоритетным ответом с дополнительными деталями когда это уместно
+- Специфическими рекомендациями для русскоязычного крипто-сообщества`;
 
 export default function AIConsultant() {
   const router = useRouter();
@@ -66,7 +70,7 @@ export default function AIConsultant() {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      text: "👋 Hi! I'm your Crypto Security AI Consultant powered by Newell AI. I can help you identify scams, analyze projects, and answer security questions. What would you like to know?",
+      text: t('aiConsultant.welcomeMessage'),
       isUser: false,
       timestamp: new Date(),
     },
@@ -128,7 +132,7 @@ Please provide a helpful security-focused response.`;
 
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
-        text: response || "I'm sorry, I couldn't process that request. Please try again.",
+        text: response || t('aiConsultant.errorMessage'),
         isUser: false,
         timestamp: new Date(),
       };
@@ -144,7 +148,7 @@ Please provide a helpful security-focused response.`;
 
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
-        text: "Sorry, I encountered an error. Please try again or rephrase your question.",
+        text: t('aiConsultant.errorMessage'),
         isUser: false,
         timestamp: new Date(),
       };
@@ -175,11 +179,11 @@ Please provide a helpful security-focused response.`;
         <View style={styles.headerCenter}>
           <View style={styles.aiIndicator}>
             <View style={styles.aiDot} />
-            <Text style={styles.headerTitle}>AI Security Expert</Text>
+            <Text style={styles.headerTitle}>{t('aiConsultant.title')}</Text>
           </View>
           <View style={styles.headerSubtitleContainer}>
             <Text style={styles.headerSubtitle}>
-              {isPro ? 'Priority Pro Mode • ' : 'Powered by '}
+              {isPro ? t('aiConsultant.proMode') : t('aiConsultant.powered') + ' '}
             </Text>
             <Text style={styles.headerSubtitleAccent}>Newell AI</Text>
           </View>
@@ -237,7 +241,7 @@ Please provide a helpful security-focused response.`;
         <View style={styles.inputWrapper}>
           <TextInput
             style={styles.input}
-            placeholder="Ask about crypto security..."
+            placeholder={t('aiConsultant.placeholder')}
             placeholderTextColor={colors.textMuted}
             value={inputText}
             onChangeText={setInputText}

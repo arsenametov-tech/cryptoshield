@@ -8,6 +8,8 @@ import {
   Dimensions,
   Alert,
   ActivityIndicator,
+  TextInput,
+  Keyboard,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
@@ -22,12 +24,15 @@ import Animated, {
   withTiming,
   Easing,
   withSpring,
+  withDelay,
 } from 'react-native-reanimated';
-import type { AdaptyPaywall, AdaptyPaywallProduct } from 'react-native-adapty';
+import type { AdaptyPaywallProduct } from 'react-native-adapty';
 import { colors, spacing, borderRadius, typography } from '@/constants/theme';
 import { SubscriptionService } from '@/services/subscription';
 import { HapticsService } from '@/services/haptics';
 import { SkeletonLoader } from '@/components/SkeletonLoader';
+import { PromoCodeService } from '@/services/promoCode';
+import { t } from '@/services/i18n';
 
 const { width } = Dimensions.get('window');
 
@@ -41,38 +46,38 @@ interface Feature {
 const FEATURES: Feature[] = [
   {
     icon: 'infinite',
-    title: 'Unlimited Scans',
-    description: 'Scan unlimited contracts and URLs without daily limits',
+    title: t('premium.features.unlimitedScans.title'),
+    description: t('premium.features.unlimitedScans.description'),
     accentColor: colors.primary,
   },
   {
     icon: 'camera',
-    title: 'Deep Screenshot Analysis',
-    description: 'Advanced AI-powered screenshot threat detection',
+    title: t('premium.features.deepScreenshot.title'),
+    description: t('premium.features.deepScreenshot.description'),
     accentColor: '#00b8ff',
   },
   {
     icon: 'flash',
-    title: 'Priority AI Expert',
-    description: 'Get faster, more detailed responses from our AI consultant',
+    title: t('premium.features.priorityAI.title'),
+    description: t('premium.features.priorityAI.description'),
     accentColor: '#ff8c00',
   },
   {
     icon: 'shield-checkmark',
-    title: 'Advanced Protection',
-    description: 'Access to all security features and real-time alerts',
+    title: t('premium.features.advancedProtection.title'),
+    description: t('premium.features.advancedProtection.description'),
     accentColor: colors.success,
   },
   {
     icon: 'trending-up',
-    title: 'Early Access',
-    description: 'Be the first to try new security features',
+    title: t('premium.features.earlyAccess.title'),
+    description: t('premium.features.earlyAccess.description'),
     accentColor: '#9d4edd',
   },
   {
     icon: 'desktop',
-    title: 'Multi-Device Sync',
-    description: 'Seamless experience across all your devices',
+    title: t('premium.features.multiDevice.title'),
+    description: t('premium.features.multiDevice.description'),
     accentColor: '#f72585',
   },
 ];
@@ -84,11 +89,18 @@ export default function PremiumScreen() {
   const [restoring, setRestoring] = useState(false);
   const [products, setProducts] = useState<AdaptyPaywallProduct[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<AdaptyPaywallProduct | null>(null);
+  const [showPromoInput, setShowPromoInput] = useState(false);
+  const [promoCode, setPromoCode] = useState('');
+  const [applyingPromo, setApplyingPromo] = useState(false);
 
   const shimmer = useSharedValue(0);
   const pulse = useSharedValue(1);
   const badgeRotate = useSharedValue(0);
   const buttonScale = useSharedValue(1);
+  const promoInputHeight = useSharedValue(0);
+  const promoInputOpacity = useSharedValue(0);
+  const celebrationScale = useSharedValue(0);
+  const celebrationOpacity = useSharedValue(0);
 
   useEffect(() => {
     // Shimmer animation
@@ -201,20 +213,98 @@ export default function PremiumScreen() {
 
       if (result.isPro) {
         HapticsService.success();
-        Alert.alert('Purchases Restored', 'Your Cryptoshield Pro subscription has been restored successfully.', [
+        Alert.alert(t('premium.purchasesRestored'), t('premium.purchasesRestoredMessage'), [
           {
-            text: 'Continue',
+            text: t('common.continue'),
             onPress: () => router.back(),
           },
         ]);
       } else {
-        Alert.alert('No Purchases Found', 'We could not find any previous purchases to restore.');
+        Alert.alert(t('premium.noPurchasesFound'), t('premium.noPurchasesFoundMessage'));
       }
     } catch {
       HapticsService.error();
-      Alert.alert('Restore Failed', 'There was an error restoring your purchases. Please try again.');
+      Alert.alert(t('premium.restoreFailed'), t('premium.restoreFailedMessage'));
     } finally {
       setRestoring(false);
+    }
+  };
+
+  const togglePromoInput = () => {
+    HapticsService.light();
+    Keyboard.dismiss();
+
+    const newShowState = !showPromoInput;
+    setShowPromoInput(newShowState);
+
+    if (newShowState) {
+      promoInputHeight.value = withSpring(80, { damping: 15, stiffness: 150 });
+      promoInputOpacity.value = withDelay(100, withTiming(1, { duration: 300 }));
+    } else {
+      promoInputOpacity.value = withTiming(0, { duration: 200 });
+      promoInputHeight.value = withDelay(200, withSpring(0, { damping: 15, stiffness: 150 }));
+    }
+  };
+
+  const showCelebrationAnimation = () => {
+    celebrationScale.value = 0;
+    celebrationOpacity.value = 1;
+
+    celebrationScale.value = withSequence(
+      withSpring(1.2, { damping: 8, stiffness: 100 }),
+      withSpring(1, { damping: 10, stiffness: 100 })
+    );
+
+    celebrationOpacity.value = withDelay(
+      2000,
+      withTiming(0, { duration: 500 })
+    );
+  };
+
+  const handleApplyPromo = async () => {
+    if (!promoCode.trim()) {
+      HapticsService.warning();
+      return;
+    }
+
+    Keyboard.dismiss();
+    HapticsService.heavy();
+
+    setApplyingPromo(true);
+
+    try {
+      const result = await PromoCodeService.applyPromoCode(promoCode);
+
+      if (result.success) {
+        // Success! Show celebration animation
+        HapticsService.success();
+        HapticsService.heavy();
+        HapticsService.heavy();
+
+        showCelebrationAnimation();
+
+        setTimeout(() => {
+          Alert.alert(
+            t('premium.promoSuccess'),
+            t('premium.promoSuccessMessage'),
+            [
+              {
+                text: t('common.continue'),
+                onPress: () => router.back(),
+              },
+            ]
+          );
+        }, 500);
+      } else {
+        HapticsService.error();
+        Alert.alert(t('common.error'), t('premium.invalidPromoCode'));
+      }
+    } catch {
+      HapticsService.error();
+      Alert.alert(t('common.error'), t('premium.invalidPromoCode'));
+    } finally {
+      setApplyingPromo(false);
+      setPromoCode('');
     }
   };
 
@@ -232,6 +322,16 @@ export default function PremiumScreen() {
 
   const buttonAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: buttonScale.value }],
+  }));
+
+  const promoInputAnimatedStyle = useAnimatedStyle(() => ({
+    height: promoInputHeight.value,
+    opacity: promoInputOpacity.value,
+  }));
+
+  const celebrationAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: celebrationScale.value }],
+    opacity: celebrationOpacity.value,
   }));
 
   const getProductPeriod = (product: AdaptyPaywallProduct): string => {
@@ -272,6 +372,17 @@ export default function PremiumScreen() {
         locations={[0, 0.5, 1]}
         style={StyleSheet.absoluteFillObject}
       />
+
+      {/* Celebration Animation Overlay */}
+      <Animated.View style={[styles.celebrationOverlay, celebrationAnimatedStyle]} pointerEvents="none">
+        <LinearGradient
+          colors={['rgba(147, 51, 234, 0.3)', 'rgba(79, 70, 229, 0.3)']}
+          style={styles.celebrationGradient}
+        >
+          <Ionicons name="sparkles" size={80} color="#a78bfa" />
+          <Text style={styles.celebrationText}>🎉</Text>
+        </LinearGradient>
+      </Animated.View>
 
       {/* Close Button */}
       <TouchableOpacity
@@ -321,10 +432,10 @@ export default function PremiumScreen() {
 
           <Text style={styles.headerTitle}>
             Crypto<Text style={styles.headerTitleAccent}>shield</Text>
-            <Text style={styles.proText}> Pro</Text>
+            <Text style={styles.proText}> {t('common.pro')}</Text>
           </Text>
           <Text style={styles.headerSubtitle}>
-            Unlock unlimited protection and advanced security features
+            {t('premium.subtitle')}
           </Text>
         </View>
 
@@ -362,7 +473,7 @@ export default function PremiumScreen() {
           </View>
         ) : products.length > 0 ? (
           <View style={styles.pricingContainer}>
-            <Text style={styles.pricingTitle}>Choose Your Plan</Text>
+            <Text style={styles.pricingTitle}>{t('premium.choosePlan')}</Text>
 
             {products.map((product) => {
               const isSelected = selectedProduct?.vendorProductId === product.vendorProductId;
@@ -396,7 +507,7 @@ export default function PremiumScreen() {
                             end={{ x: 1, y: 0 }}
                             style={styles.bestValueGradient}
                           >
-                            <Text style={styles.bestValueText}>BEST VALUE</Text>
+                            <Text style={styles.bestValueText}>{t('premium.bestValue')}</Text>
                           </LinearGradient>
                         </View>
                       )}
@@ -467,7 +578,7 @@ export default function PremiumScreen() {
                     <ActivityIndicator size="small" color="#0a0e27" />
                   ) : (
                     <>
-                      <Text style={styles.ctaText}>Upgrade to Pro</Text>
+                      <Text style={styles.ctaText}>{t('premium.upgradeToPro')}</Text>
                       <Ionicons name="arrow-forward" size={24} color="#0a0e27" />
                     </>
                   )}
@@ -475,6 +586,78 @@ export default function PremiumScreen() {
               </BlurView>
             </TouchableOpacity>
           </Animated.View>
+        )}
+
+        {/* Promo Code Section */}
+        {!loading && (
+          <View style={styles.promoSection}>
+            {/* Promo Code Button */}
+            <TouchableOpacity
+              style={styles.promoButton}
+              onPress={togglePromoInput}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={['rgba(147, 51, 234, 0.1)', 'rgba(79, 70, 229, 0.1)']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.promoButtonGradient}
+              >
+                <Ionicons name="gift" size={20} color="#a78bfa" />
+                <Text style={styles.promoButtonText}>{t('premium.promoCode')}</Text>
+                <Ionicons
+                  name={showPromoInput ? 'chevron-up' : 'chevron-down'}
+                  size={20}
+                  color="#a78bfa"
+                />
+              </LinearGradient>
+            </TouchableOpacity>
+
+            {/* Promo Code Input with Glassmorphism */}
+            <Animated.View style={[styles.promoInputContainer, promoInputAnimatedStyle]}>
+              <BlurView intensity={40} tint="dark" style={styles.promoInputBlur}>
+                <LinearGradient
+                  colors={['rgba(147, 51, 234, 0.15)', 'rgba(79, 70, 229, 0.1)']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.promoInputGradient}
+                >
+                  <View style={styles.promoInputRow}>
+                    <View style={styles.promoInputWrapper}>
+                      <TextInput
+                        style={styles.promoInput}
+                        placeholder={t('premium.enterPromoCode')}
+                        placeholderTextColor={colors.textMuted}
+                        value={promoCode}
+                        onChangeText={setPromoCode}
+                        autoCapitalize="characters"
+                        autoCorrect={false}
+                        editable={!applyingPromo}
+                      />
+                    </View>
+                    <TouchableOpacity
+                      style={[
+                        styles.applyPromoButton,
+                        (!promoCode.trim() || applyingPromo) && styles.applyPromoButtonDisabled,
+                      ]}
+                      onPress={handleApplyPromo}
+                      disabled={!promoCode.trim() || applyingPromo}
+                      activeOpacity={0.8}
+                    >
+                      {applyingPromo ? (
+                        <ActivityIndicator size="small" color={colors.background} />
+                      ) : (
+                        <>
+                          <Text style={styles.applyPromoButtonText}>{t('premium.applyPromo')}</Text>
+                          <Ionicons name="checkmark-circle" size={20} color={colors.background} />
+                        </>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                </LinearGradient>
+              </BlurView>
+            </Animated.View>
+          </View>
         )}
 
         {/* Restore Purchases */}
@@ -486,15 +669,13 @@ export default function PremiumScreen() {
           {restoring ? (
             <ActivityIndicator size="small" color={colors.primary} />
           ) : (
-            <Text style={styles.restoreButtonText}>Restore Purchases</Text>
+            <Text style={styles.restoreButtonText}>{t('premium.restorePurchases')}</Text>
           )}
         </TouchableOpacity>
 
         {/* Terms */}
         <Text style={styles.termsText}>
-          Subscriptions will be charged to your account through the App Store. Your subscription
-          will automatically renew unless canceled at least 24 hours before the end of the current
-          period. Manage your subscription in App Store settings.
+          {t('premium.terms')}
         </Text>
       </ScrollView>
     </View>
@@ -821,5 +1002,108 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     textAlign: 'center',
     lineHeight: 16,
+  },
+  promoSection: {
+    marginBottom: spacing.lg,
+  },
+  promoButton: {
+    borderRadius: borderRadius.lg,
+    overflow: 'hidden',
+    marginBottom: spacing.sm,
+    borderWidth: 2,
+    borderColor: 'rgba(167, 139, 250, 0.3)',
+  },
+  promoButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.md,
+    gap: spacing.sm,
+  },
+  promoButtonText: {
+    fontSize: typography.fontSize.md,
+    fontWeight: typography.fontWeight.semibold,
+    color: '#a78bfa',
+  },
+  promoInputContainer: {
+    overflow: 'hidden',
+  },
+  promoInputBlur: {
+    borderRadius: borderRadius.lg,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: 'rgba(167, 139, 250, 0.4)',
+    shadowColor: '#a78bfa',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+  },
+  promoInputGradient: {
+    padding: spacing.md,
+  },
+  promoInputRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    alignItems: 'center',
+  },
+  promoInputWrapper: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: 'rgba(167, 139, 250, 0.3)',
+  },
+  promoInput: {
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    fontSize: typography.fontSize.md,
+    color: colors.text,
+    fontWeight: typography.fontWeight.semibold,
+  },
+  applyPromoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    backgroundColor: '#a78bfa',
+    borderRadius: borderRadius.md,
+    shadowColor: '#a78bfa',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.5,
+    shadowRadius: 8,
+  },
+  applyPromoButtonDisabled: {
+    opacity: 0.5,
+  },
+  applyPromoButtonText: {
+    fontSize: typography.fontSize.md,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.background,
+  },
+  celebrationOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  celebrationGradient: {
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#a78bfa',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 40,
+  },
+  celebrationText: {
+    fontSize: 80,
+    marginTop: spacing.md,
   },
 });

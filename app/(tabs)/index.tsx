@@ -26,8 +26,9 @@ import { StorageService } from '@/services/storage';
 import { useTextGeneration } from '@fastshot/ai';
 import { HapticsService } from '@/services/haptics';
 import { ShimmerBadge } from '@/components/ShimmerBadge';
-import { SkeletonLoader } from '@/components/SkeletonLoader';
+import { LabeledSkeletonLoader } from '@/components/SkeletonLoader';
 import { AnimatedPressable, AnimatedCard, AnimatedIconButton, AnimatedButton } from '@/components/AnimatedPressable';
+import { t } from '@/services/i18n';
 
 const { width } = Dimensions.get('window');
 const RADAR_SIZE = width * 0.6;
@@ -114,17 +115,17 @@ export default function Dashboard() {
         return;
       }
 
-      // Generate new tip using Newell AI
+      // Generate new tip using Newell AI with Russian prompt
       setIsLoadingTip(true);
 
-      const response = await generateText('Generate a short, practical crypto security tip (max 100 words). Focus on topics like phishing, rug pulls, smart contract risks, wallet security, or social engineering. Make it actionable and easy to understand for crypto users.');
+      const response = await generateText('Сгенерируй короткий, практичный совет по крипто-безопасности (максимум 100 слов). Сфокусируйся на темах вроде фишинга, rug pull\'ов, рисков смарт-контрактов, безопасности кошельков или социальной инженерии. Сделай его практичным и простым для понимания крипто-пользователей. Ответь на русском языке.');
 
-      const tip = response || 'Always verify contract addresses before transactions and never share your private keys.';
+      const tip = response || 'Всегда проверяйте адреса контрактов перед транзакциями и никогда не делитесь своими приватными ключами.';
       setSecurityTip(tip);
       await StorageService.saveSecurityTip(tip);
     } catch (error) {
       console.error('Error loading security tip:', error);
-      setSecurityTip('Always verify contract addresses before transactions and never share your private keys.');
+      setSecurityTip('Всегда проверяйте адреса контрактов перед транзакциями и никогда не делитесь своими приватными ключами.');
     } finally {
       setIsLoadingTip(false);
     }
@@ -252,11 +253,11 @@ export default function Dashboard() {
               hapticType="medium"
               scaleOnPress={0.95}
             >
-              <ShimmerBadge text="Pro" icon="star" compact />
+              <ShimmerBadge text={t('common.pro')} icon="star" compact />
             </AnimatedPressable>
           )}
           {isPro && (
-            <ShimmerBadge text="Pro" icon="shield-checkmark" compact />
+            <ShimmerBadge text={t('common.pro')} icon="shield-checkmark" compact />
           )}
           <AnimatedIconButton
             style={styles.settingsButton}
@@ -275,10 +276,10 @@ export default function Dashboard() {
           <BlurView intensity={20} tint="dark" style={styles.scanCounter}>
             <Ionicons name="scan" size={20} color={colors.primary} />
             <Text style={styles.scanCounterText}>
-              {scansRemaining} {scansRemaining === 1 ? 'scan' : 'scans'} remaining today
+              {t('dashboard.scansRemaining', { count: scansRemaining })}
             </Text>
             <AnimatedPressable onPress={() => router.push('/premium')} scaleOnPress={0.94}>
-              <Text style={styles.scanCounterUpgrade}>Upgrade</Text>
+              <Text style={styles.scanCounterUpgrade}>{t('common.upgrade')}</Text>
             </AnimatedPressable>
           </BlurView>
         </View>
@@ -329,7 +330,7 @@ export default function Dashboard() {
               hapticType="heavy"
             >
               <Text style={styles.scanButtonText}>
-                {isScanning ? 'SCANNING...' : 'TAP TO SCAN'}
+                {isScanning ? t('dashboard.scanning') : t('dashboard.tapToScan')}
               </Text>
             </AnimatedButton>
           </Animated.View>
@@ -340,7 +341,7 @@ export default function Dashboard() {
           <View style={styles.inputWrapper}>
             <TextInput
               style={styles.input}
-              placeholder="Enter Contract Address (0x...)"
+              placeholder={t('dashboard.inputContract')}
               placeholderTextColor={colors.textMuted}
               value={contractAddress}
               onChangeText={setContractAddress}
@@ -353,7 +354,7 @@ export default function Dashboard() {
           <View style={styles.inputWrapper}>
             <TextInput
               style={styles.input}
-              placeholder="Check Website URL"
+              placeholder={t('dashboard.inputWebsite')}
               placeholderTextColor={colors.textMuted}
               value={websiteUrl}
               onChangeText={setWebsiteUrl}
@@ -368,10 +369,10 @@ export default function Dashboard() {
         {/* Security Tip of the Day */}
         <View style={styles.tipSection}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Security Tip of the Day</Text>
+            <Text style={styles.sectionTitle}>{t('dashboard.securityTipTitle')}</Text>
             <View style={styles.aiPoweredBadge}>
               <Ionicons name="sparkles" size={12} color={colors.primary} />
-              <Text style={styles.aiPoweredText}>AI Powered</Text>
+              <Text style={styles.aiPoweredText}>{t('dashboard.aiPowered')}</Text>
             </View>
           </View>
 
@@ -408,9 +409,7 @@ export default function Dashboard() {
 
               {isLoadingTip ? (
                 <View style={styles.tipLoadingContainer}>
-                  <SkeletonLoader height={16} style={{ marginBottom: 8 }} />
-                  <SkeletonLoader height={16} width="90%" style={{ marginBottom: 8 }} />
-                  <SkeletonLoader height={16} width="75%" />
+                  <LabeledSkeletonLoader label="thinking" size={40} />
                 </View>
               ) : (
                 <View style={styles.tipContentContainer}>
@@ -430,7 +429,7 @@ export default function Dashboard() {
 
         {/* Recent Checks */}
         <View style={styles.recentSection}>
-          <Text style={styles.sectionTitle}>Recent Checks</Text>
+          <Text style={styles.sectionTitle}>{t('dashboard.recentChecks')}</Text>
 
           <View style={styles.recentChecksGrid}>
             {RECENT_CHECKS.map((check) => (

@@ -8,7 +8,8 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
-import { colors } from '@/constants/theme';
+import { colors, spacing, typography } from '@/constants/theme';
+import { t } from '@/services/i18n';
 
 interface SkeletonLoaderProps {
   width?: number | string;
@@ -168,6 +169,129 @@ export const MessageSkeleton = () => {
   );
 };
 
+// Labeled Skeleton Loader with Russian labels
+interface LabeledSkeletonLoaderProps {
+  label?: 'analyzing' | 'checking' | 'loading' | 'processing' | 'scanning' | 'thinking' | 'validating';
+  size?: number;
+}
+
+export const LabeledSkeletonLoader = ({
+  label = 'analyzing',
+  size = 60
+}: LabeledSkeletonLoaderProps) => {
+  const rotation = useSharedValue(0);
+  const pulse = useSharedValue(1);
+  const opacity = useSharedValue(1);
+
+  useEffect(() => {
+    rotation.value = withRepeat(
+      withTiming(360, {
+        duration: 2000,
+        easing: Easing.linear,
+      }),
+      -1,
+      false
+    );
+
+    pulse.value = withRepeat(
+      withTiming(1.15, {
+        duration: 1000,
+        easing: Easing.bezier(0.5, 0, 0.5, 1),
+      }),
+      -1,
+      true
+    );
+
+    opacity.value = withRepeat(
+      withTiming(0.5, {
+        duration: 800,
+        easing: Easing.bezier(0.5, 0, 0.5, 1),
+      }),
+      -1,
+      true
+    );
+  }, [rotation, pulse, opacity]);
+
+  const rotationStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ rotate: `${rotation.value}deg` }],
+    };
+  });
+
+  const pulseStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ scale: pulse.value }],
+    };
+  });
+
+  const textOpacityStyle = useAnimatedStyle(() => {
+    return {
+      opacity: opacity.value,
+    };
+  });
+
+  const getLabelText = () => {
+    return t(`skeletons.${label}`);
+  };
+
+  return (
+    <View style={styles.labeledSkeletonContainer}>
+      <View style={[styles.scanningContainer, { width: size, height: size }]}>
+        {/* Outer pulse ring */}
+        <Animated.View style={[styles.pulseRing, pulseStyle]}>
+          <View
+            style={[
+              styles.ring,
+              {
+                width: size,
+                height: size,
+                borderRadius: size / 2,
+                borderColor: colors.primary,
+              },
+            ]}
+          />
+        </Animated.View>
+
+        {/* Rotating scanner */}
+        <Animated.View style={[styles.scanner, rotationStyle]}>
+          <LinearGradient
+            colors={['transparent', `${colors.primary}88`, colors.primary]}
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+            style={[
+              styles.scannerGradient,
+              {
+                width: size * 0.7,
+                height: size * 0.7,
+                borderRadius: (size * 0.7) / 2,
+              },
+            ]}
+          />
+        </Animated.View>
+
+        {/* Center dot */}
+        <View style={styles.centerDot}>
+          <View
+            style={[
+              styles.dot,
+              {
+                width: size * 0.2,
+                height: size * 0.2,
+                borderRadius: (size * 0.2) / 2,
+              },
+            ]}
+          />
+        </View>
+      </View>
+
+      {/* Label Text */}
+      <Animated.Text style={[styles.labelText, textOpacityStyle]}>
+        {getLabelText()}
+      </Animated.Text>
+    </View>
+  );
+};
+
 const styles = StyleSheet.create({
   skeleton: {
     backgroundColor: colors.backgroundSecondary,
@@ -217,5 +341,16 @@ const styles = StyleSheet.create({
   },
   messageContent: {
     flex: 1,
+  },
+  labeledSkeletonContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.md,
+  },
+  labelText: {
+    fontSize: typography.fontSize.md,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.primary,
+    textAlign: 'center',
   },
 });

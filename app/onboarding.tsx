@@ -28,6 +28,7 @@ import { BlurView } from 'expo-blur';
 import { colors, spacing, borderRadius, typography } from '@/constants/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { HapticsService } from '@/services/haptics';
+import { t } from '@/services/i18n';
 
 const { width, height } = Dimensions.get('window');
 
@@ -44,27 +45,24 @@ const slides: OnboardingSlide[] = [
   {
     id: '1',
     icon: 'shield-checkmark',
-    title: 'One-Click Protection',
-    description:
-      'Scan any contract or website instantly. Our advanced AI radar detects scams, honeypots, and malicious patterns in seconds.',
+    title: t('onboarding.slide1.title'),
+    description: t('onboarding.slide1.description'),
     accentColor: colors.primary,
     gradientColors: [colors.primary, '#00ffd5'],
   },
   {
     id: '2',
     icon: 'scan-circle',
-    title: 'AI Security Consultant',
-    description:
-      'Upload screenshots, chat 24/7, and get expert analysis. Our AI consultant analyzes images to detect social engineering and fraud patterns.',
+    title: t('onboarding.slide2.title'),
+    description: t('onboarding.slide2.description'),
     accentColor: '#00b8ff',
     gradientColors: ['#00b8ff', '#0099ff'],
   },
   {
     id: '3',
     icon: 'library',
-    title: 'Knowledge Base',
-    description:
-      'Access comprehensive guides on phishing, rug pulls, and crypto security. Stay educated and protected from emerging threats.',
+    title: t('onboarding.slide3.title'),
+    description: t('onboarding.slide3.description'),
     accentColor: '#ff8c00',
     gradientColors: ['#ff8c00', '#ffaa33'],
   },
@@ -305,7 +303,7 @@ export default function OnboardingScreen() {
                 style={styles.buttonGradient}
               >
                 <View style={styles.buttonGlow} />
-                <Text style={styles.getStartedText}>Get Started</Text>
+                <Text style={styles.getStartedText}>{t('onboarding.getStarted')}</Text>
                 <Ionicons name="arrow-forward" size={24} color="#0a0e27" />
               </LinearGradient>
             </BlurView>
