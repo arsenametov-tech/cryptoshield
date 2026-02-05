@@ -2,9 +2,14 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import { colors, spacing, borderRadius, typography } from '@/constants/theme';
+import { HapticsService } from '@/services/haptics';
 
 export default function AIExpert() {
+  const router = useRouter();
+
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
@@ -26,25 +31,51 @@ export default function AIExpert() {
         {/* Action Cards */}
         <View style={styles.cardsContainer}>
           {/* Analyze Screenshot Card */}
-          <TouchableOpacity style={styles.actionCard}>
-            <View style={styles.cardIcon}>
-              <Ionicons name="image" size={48} color={colors.primary} />
-            </View>
-            <Text style={styles.cardTitle}>Analyze Screenshot</Text>
-            <Text style={styles.cardDescription}>
-              Upload chats, ads, or whitepapers. Newell Vision detects red flags.
-            </Text>
+          <TouchableOpacity
+            style={styles.actionCard}
+            onPress={() => {
+              HapticsService.medium();
+              router.push('/screenshot-analysis');
+            }}
+          >
+            <LinearGradient
+              colors={[`${colors.primary}11`, 'transparent']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.cardGradient}
+            >
+              <View style={styles.cardIcon}>
+                <Ionicons name="image" size={48} color={colors.primary} />
+              </View>
+              <Text style={styles.cardTitle}>Analyze Screenshot</Text>
+              <Text style={styles.cardDescription}>
+                Upload chats, ads, or whitepapers. Newell Vision detects red flags.
+              </Text>
+            </LinearGradient>
           </TouchableOpacity>
 
           {/* Ask AI Consultant Card */}
-          <TouchableOpacity style={styles.actionCard}>
-            <View style={styles.cardIcon}>
-              <Ionicons name="chatbubbles" size={48} color={colors.primary} />
-            </View>
-            <Text style={styles.cardTitle}>Ask AI Consultant</Text>
-            <Text style={styles.cardDescription}>
-              Unsure about a project? Chat with Newell AI about crypto risks.
-            </Text>
+          <TouchableOpacity
+            style={styles.actionCard}
+            onPress={() => {
+              HapticsService.medium();
+              router.push('/ai-consultant');
+            }}
+          >
+            <LinearGradient
+              colors={[`${colors.primary}11`, 'transparent']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.cardGradient}
+            >
+              <View style={styles.cardIcon}>
+                <Ionicons name="chatbubbles" size={48} color={colors.primary} />
+              </View>
+              <Text style={styles.cardTitle}>Ask AI Consultant</Text>
+              <Text style={styles.cardDescription}>
+                Unsure about a project? Chat with Newell AI about crypto risks.
+              </Text>
+            </LinearGradient>
           </TouchableOpacity>
         </View>
 
@@ -93,8 +124,16 @@ const styles = StyleSheet.create({
   actionCard: {
     backgroundColor: colors.backgroundSecondary,
     borderRadius: borderRadius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderWidth: 2,
+    borderColor: `${colors.primary}22`,
+    overflow: 'hidden',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  cardGradient: {
     padding: spacing.xl,
     alignItems: 'center',
     gap: spacing.md,

@@ -15,8 +15,7 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withRepeat,
-  withTiming,
-  Easing,
+  withSpring,
   interpolate,
   Extrapolate,
   SharedValue,
@@ -25,6 +24,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { colors, spacing, borderRadius, typography } from '@/constants/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { HapticsService } from '@/services/haptics';
 
 const { width, height } = Dimensions.get('window');
 
@@ -113,7 +113,11 @@ export default function OnboardingScreen() {
   const handleViewableItemsChanged = useRef(
     ({ viewableItems }: { viewableItems: ViewToken[] }) => {
       if (viewableItems[0]?.index !== undefined && viewableItems[0].index !== null) {
-        setCurrentIndex(viewableItems[0].index);
+        const newIndex = viewableItems[0].index;
+        if (newIndex !== currentIndex) {
+          HapticsService.selection();
+          setCurrentIndex(newIndex);
+        }
       }
     }
   ).current;
@@ -124,6 +128,7 @@ export default function OnboardingScreen() {
 
   const handleNext = () => {
     if (currentIndex < slides.length - 1) {
+      HapticsService.light();
       flatListRef.current?.scrollToIndex({
         index: currentIndex + 1,
         animated: true,
@@ -132,11 +137,13 @@ export default function OnboardingScreen() {
   };
 
   const handleSkip = async () => {
+    HapticsService.medium();
     await AsyncStorage.setItem('@cryptoshield_onboarding_complete', 'true');
     router.replace('/(tabs)');
   };
 
   const handleGetStarted = async () => {
+    HapticsService.success();
     await AsyncStorage.setItem('@cryptoshield_onboarding_complete', 'true');
     router.replace('/(tabs)');
   };
@@ -231,7 +238,10 @@ const SlideItem = React.memo(({
 
   React.useEffect(() => {
     pulseAnimation.value = withRepeat(
-      withTiming(1.1, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
+      withSpring(1.15, {
+        damping: 3,
+        stiffness: 50,
+      }),
       -1,
       true
     );
@@ -243,19 +253,26 @@ const SlideItem = React.memo(({
     const scale = interpolate(
       scrollX.value,
       inputRange,
-      [0.8, 1, 0.8],
+      [0.85, 1, 0.85],
       Extrapolate.CLAMP
     );
 
     const opacity = interpolate(
       scrollX.value,
       inputRange,
-      [0, 1, 0],
+      [0.3, 1, 0.3],
+      Extrapolate.CLAMP
+    );
+
+    const translateY = interpolate(
+      scrollX.value,
+      inputRange,
+      [30, 0, 30],
       Extrapolate.CLAMP
     );
 
     return {
-      transform: [{ scale }],
+      transform: [{ scale }, { translateY }],
       opacity,
     };
   });

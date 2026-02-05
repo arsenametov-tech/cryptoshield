@@ -8,7 +8,6 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,6 +15,9 @@ import { useRouter } from 'expo-router';
 import { colors, spacing, borderRadius, typography } from '@/constants/theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTextGeneration } from '@fastshot/ai';
+import { HapticsService } from '@/services/haptics';
+import { MessageSkeleton } from '@/components/SkeletonLoader';
+import { ShimmerBadge } from '@/components/ShimmerBadge';
 
 interface Message {
   id: string;
@@ -93,6 +95,9 @@ export default function AIConsultant() {
   const handleSend = async () => {
     if (!inputText.trim() || isLoading) return;
 
+    // Light haptic feedback for sending message
+    HapticsService.light();
+
     const userMessage: Message = {
       id: Date.now().toString(),
       text: inputText.trim(),
@@ -128,9 +133,14 @@ Please provide a helpful security-focused response.`;
         timestamp: new Date(),
       };
 
+      // Success haptic feedback
+      HapticsService.success();
       setMessages((prev) => [...prev, aiMessage]);
     } catch (error) {
       console.error('Error generating AI response:', error);
+
+      // Error haptic feedback
+      HapticsService.error();
 
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -153,7 +163,13 @@ Please provide a helpful security-focused response.`;
 
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => {
+            HapticsService.light();
+            router.back();
+          }}
+        >
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
 
@@ -161,18 +177,18 @@ Please provide a helpful security-focused response.`;
           <View style={styles.aiIndicator}>
             <View style={styles.aiDot} />
             <Text style={styles.headerTitle}>AI Security Expert</Text>
-            {isPro && (
-              <View style={styles.proBadgeHeader}>
-                <Ionicons name="star" size={12} color={colors.primary} />
-              </View>
-            )}
           </View>
-          <Text style={styles.headerSubtitle}>
-            {isPro ? 'Priority Pro Mode • Newell AI' : 'Powered by Newell AI'}
-          </Text>
+          <View style={styles.headerSubtitleContainer}>
+            <Text style={styles.headerSubtitle}>
+              {isPro ? 'Priority Pro Mode • ' : 'Powered by '}
+            </Text>
+            <Text style={styles.headerSubtitleAccent}>Newell AI</Text>
+          </View>
         </View>
 
-        <View style={styles.headerRight} />
+        <View style={styles.headerRight}>
+          {isPro && <ShimmerBadge text="Pro" icon="star" compact />}
+        </View>
       </View>
 
       {/* Messages */}
@@ -214,19 +230,7 @@ Please provide a helpful security-focused response.`;
           </View>
         ))}
 
-        {isLoading && (
-          <View style={[styles.messageBubble, styles.aiMessage]}>
-            <View style={styles.aiAvatar}>
-              <Ionicons name="sparkles" size={16} color={colors.primary} />
-            </View>
-            <View style={[styles.messageContent, styles.aiMessageContent]}>
-              <ActivityIndicator size="small" color={colors.primary} />
-              <Text style={[styles.messageText, styles.aiMessageText, { marginLeft: 8 }]}>
-                Analyzing...
-              </Text>
-            </View>
-          </View>
-        )}
+        {isLoading && <MessageSkeleton />}
       </ScrollView>
 
       {/* Input */}
@@ -301,18 +305,23 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeight.bold,
     color: colors.text,
   },
+  headerSubtitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
   headerSubtitle: {
     fontSize: typography.fontSize.xs,
     color: colors.textSecondary,
-    marginTop: 2,
   },
-  proBadgeHeader: {
-    backgroundColor: `${colors.primary}22`,
-    borderRadius: borderRadius.full,
-    padding: spacing.xs / 2,
+  headerSubtitleAccent: {
+    fontSize: typography.fontSize.xs,
+    color: colors.primary,
+    fontWeight: typography.fontWeight.semibold,
   },
   headerRight: {
     width: 40,
+    alignItems: 'flex-end',
   },
   messagesContainer: {
     flex: 1,

@@ -19,6 +19,7 @@ import { colors, spacing, borderRadius, typography } from '@/constants/theme';
 import { StorageService, UserPreferences } from '@/services/storage';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
+import { HapticsService } from '@/services/haptics';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -52,12 +53,14 @@ export default function SettingsScreen() {
   };
 
   const handleToggleNotifications = async (value: boolean) => {
+    HapticsService.selection();
     const updated = { ...preferences, dailyNotifications: value };
     setPreferences(updated);
     await StorageService.savePreferences(updated);
   };
 
   const handleToggleAlerts = async (value: boolean) => {
+    HapticsService.selection();
     const updated = { ...preferences, securityAlerts: value };
     setPreferences(updated);
     await StorageService.savePreferences(updated);
@@ -71,6 +74,7 @@ export default function SettingsScreen() {
   };
 
   const handleClearHistory = () => {
+    HapticsService.warning();
     Alert.alert(
       'Clear History',
       'Are you sure you want to clear all scan history? This action cannot be undone.',
@@ -78,11 +82,13 @@ export default function SettingsScreen() {
         {
           text: 'Cancel',
           style: 'cancel',
+          onPress: () => HapticsService.light(),
         },
         {
           text: 'Clear',
           style: 'destructive',
           onPress: async () => {
+            HapticsService.success();
             await StorageService.clearHistory();
             Alert.alert('Success', 'Scan history has been cleared.');
           },

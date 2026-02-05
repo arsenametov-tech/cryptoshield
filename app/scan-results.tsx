@@ -21,6 +21,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { colors, spacing, borderRadius, typography } from '@/constants/theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StorageService } from '@/services/storage';
+import { HapticsService } from '@/services/haptics';
 
 const { width } = Dimensions.get('window');
 const GAUGE_SIZE = width * 0.55;
@@ -152,6 +153,15 @@ export default function ScanResults() {
   const checksScale = useSharedValue(0.8);
 
   useEffect(() => {
+    // Haptic feedback based on risk level
+    if (riskScore >= 70) {
+      HapticsService.warning();
+    } else if (riskScore >= 40) {
+      HapticsService.medium();
+    } else {
+      HapticsService.success();
+    }
+
     // Animate gauge
     gaugeRotation.value = withTiming(riskScore / 100, {
       duration: 1500,

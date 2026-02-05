@@ -25,6 +25,9 @@ import { BlurView } from 'expo-blur';
 import { colors, spacing, borderRadius, typography } from '@/constants/theme';
 import { StorageService } from '@/services/storage';
 import { useTextGeneration } from '@fastshot/ai';
+import { HapticsService } from '@/services/haptics';
+import { ShimmerBadge } from '@/components/ShimmerBadge';
+import { SkeletonLoader } from '@/components/SkeletonLoader';
 
 const { width } = Dimensions.get('window');
 const RADAR_SIZE = width * 0.6;
@@ -129,6 +132,7 @@ export default function Dashboard() {
 
   const handleScan = async () => {
     if (!contractAddress.trim() && !websiteUrl.trim()) {
+      HapticsService.warning();
       return; // Need at least one input
     }
 
@@ -139,10 +143,13 @@ export default function Dashboard() {
 
     if (!canScan && !isPro) {
       // Show upgrade screen
+      HapticsService.medium();
       router.push('/premium');
       return;
     }
 
+    // Heavy haptic feedback for scan initiation
+    HapticsService.heavy();
     setIsScanning(true);
 
     // Increment scan count for free users
@@ -171,6 +178,7 @@ export default function Dashboard() {
     // Simulate scanning delay
     setTimeout(() => {
       setIsScanning(false);
+      HapticsService.success();
       const addressToScan = contractAddress.trim() || websiteUrl.trim();
       router.push({
         pathname: '/scan-results',
@@ -238,16 +246,23 @@ export default function Dashboard() {
         <View style={styles.headerRight}>
           {!isPro && (
             <TouchableOpacity
-              style={styles.upgradeButton}
-              onPress={() => router.push('/premium')}
+              onPress={() => {
+                HapticsService.medium();
+                router.push('/premium');
+              }}
             >
-              <Ionicons name="star" size={16} color={colors.background} />
-              <Text style={styles.upgradeButtonText}>Pro</Text>
+              <ShimmerBadge text="Pro" icon="star" compact />
             </TouchableOpacity>
+          )}
+          {isPro && (
+            <ShimmerBadge text="Pro" icon="shield-checkmark" compact />
           )}
           <TouchableOpacity
             style={styles.settingsButton}
-            onPress={() => router.push('/settings')}
+            onPress={() => {
+              HapticsService.light();
+              router.push('/settings');
+            }}
           >
             <Ionicons name="settings-outline" size={24} color={colors.text} />
           </TouchableOpacity>
@@ -350,30 +365,55 @@ export default function Dashboard() {
 
         {/* Security Tip of the Day */}
         <View style={styles.tipSection}>
-          <Text style={styles.sectionTitle}>Security Tip of the Day</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Security Tip of the Day</Text>
+            <View style={styles.aiPoweredBadge}>
+              <Ionicons name="sparkles" size={12} color={colors.primary} />
+              <Text style={styles.aiPoweredText}>AI Powered</Text>
+            </View>
+          </View>
 
-          <BlurView intensity={20} tint="dark" style={styles.tipCard}>
+          <BlurView intensity={30} tint="dark" style={styles.tipCard}>
             <LinearGradient
-              colors={[`${colors.primary}15`, 'transparent']}
+              colors={[`${colors.primary}22`, `${colors.primary}08`, 'transparent']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.tipGradient}
             >
               <View style={styles.tipHeader}>
                 <View style={styles.tipIconContainer}>
-                  <Ionicons name="bulb" size={24} color={colors.primary} />
+                  <LinearGradient
+                    colors={[`${colors.primary}44`, `${colors.primary}22`]}
+                    style={styles.tipIconGradient}
+                  >
+                    <Ionicons name="bulb" size={28} color={colors.primary} />
+                  </LinearGradient>
                 </View>
-                <Text style={styles.tipLabel}>Daily Tip</Text>
+                <View style={styles.tipHeaderContent}>
+                  <Text style={styles.tipLabel}>Daily Security Insight</Text>
+                  <Text style={styles.tipSubLabel}>
+                    {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+                  </Text>
+                </View>
               </View>
 
               {isLoadingTip ? (
                 <View style={styles.tipLoadingContainer}>
-                  <ActivityIndicator size="small" color={colors.primary} />
-                  <Text style={styles.tipLoadingText}>Loading today&apos;s tip...</Text>
+                  <SkeletonLoader height={16} style={{ marginBottom: 8 }} />
+                  <SkeletonLoader height={16} width="90%" style={{ marginBottom: 8 }} />
+                  <SkeletonLoader height={16} width="75%" />
                 </View>
               ) : (
-                <Text style={styles.tipText}>{securityTip}</Text>
+                <View style={styles.tipContentContainer}>
+                  <View style={styles.tipQuoteMark}>
+                    <Text style={styles.quoteText}>&ldquo;</Text>
+                  </View>
+                  <Text style={styles.tipText}>{securityTip}</Text>
+                </View>
               )}
+
+              {/* Decorative gradient border */}
+              <View style={styles.tipBorderGlow} />
             </LinearGradient>
           </BlurView>
         </View>
@@ -448,20 +488,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-  },
-  upgradeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.full,
-  },
-  upgradeButtonText: {
-    fontSize: typography.fontSize.sm,
-    fontWeight: typography.fontWeight.bold,
-    color: colors.background,
   },
   settingsButton: {
     padding: spacing.sm,
@@ -573,51 +599,114 @@ const styles = StyleSheet.create({
   tipSection: {
     marginBottom: spacing.xl,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  aiPoweredBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs / 2,
+    backgroundColor: `${colors.primary}15`,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs / 2,
+    borderRadius: borderRadius.full,
+    borderWidth: 1,
+    borderColor: `${colors.primary}33`,
+  },
+  aiPoweredText: {
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.primary,
+  },
   tipCard: {
     borderRadius: borderRadius.lg,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderWidth: 2,
+    borderColor: `${colors.primary}22`,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 8,
   },
   tipGradient: {
     padding: spacing.lg,
+    position: 'relative',
   },
   tipHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: spacing.md,
-    gap: spacing.sm,
+    gap: spacing.md,
   },
   tipIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: `${colors.primary}22`,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    overflow: 'hidden',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  tipIconGradient: {
+    width: '100%',
+    height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 2,
+    borderColor: `${colors.primary}44`,
+    borderRadius: 28,
+  },
+  tipHeaderContent: {
+    flex: 1,
   },
   tipLabel: {
     fontSize: typography.fontSize.md,
     fontWeight: typography.fontWeight.bold,
     color: colors.primary,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
+    marginBottom: 2,
+  },
+  tipSubLabel: {
+    fontSize: typography.fontSize.xs,
+    color: colors.textSecondary,
   },
   tipLoadingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
     paddingVertical: spacing.md,
   },
-  tipLoadingText: {
-    fontSize: typography.fontSize.sm,
-    color: colors.textSecondary,
-    fontStyle: 'italic',
+  tipContentContainer: {
+    position: 'relative',
+  },
+  tipQuoteMark: {
+    position: 'absolute',
+    top: -8,
+    left: -8,
+    opacity: 0.2,
+  },
+  quoteText: {
+    fontSize: 48,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.primary,
+    lineHeight: 48,
   },
   tipText: {
     fontSize: typography.fontSize.md,
     color: colors.text,
-    lineHeight: 22,
+    lineHeight: 24,
+    paddingLeft: spacing.md,
+  },
+  tipBorderGlow: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 2,
+    backgroundColor: colors.primary,
+    opacity: 0.3,
   },
   recentSection: {
     marginTop: spacing.md,

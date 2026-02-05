@@ -5,9 +5,9 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  ActivityIndicator,
   Dimensions,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
@@ -25,6 +25,9 @@ import Animated, {
 import { PurchasesPackage } from 'react-native-purchases';
 import { colors, spacing, borderRadius, typography } from '@/constants/theme';
 import { SubscriptionService } from '@/services/subscription';
+import { HapticsService } from '@/services/haptics';
+import { ShimmerUpgradeButton } from '@/components/ShimmerBadge';
+import { SkeletonLoader } from '@/components/SkeletonLoader';
 
 const { width } = Dimensions.get('window');
 
@@ -129,15 +132,19 @@ export default function PremiumScreen() {
 
   const handlePurchase = async () => {
     if (!selectedPackage) {
+      HapticsService.warning();
       Alert.alert('Error', 'Please select a subscription plan');
       return;
     }
+
+    HapticsService.medium();
 
     try {
       setPurchasing(true);
       const result = await SubscriptionService.purchasePackage(selectedPackage);
 
       if (result.success && result.isPro) {
+        HapticsService.success();
         Alert.alert(
           'Welcome to Cryptoshield Pro! 🎉',
           'You now have unlimited access to all premium features.',
@@ -151,6 +158,7 @@ export default function PremiumScreen() {
       }
     } catch (err: any) {
       if (!err.userCancelled) {
+        HapticsService.error();
         Alert.alert('Purchase Failed', 'There was an error processing your purchase. Please try again.');
       }
     } finally {
@@ -225,7 +233,13 @@ export default function PremiumScreen() {
       <StatusBar style="light" />
 
       {/* Close Button */}
-      <TouchableOpacity style={styles.closeButton} onPress={() => router.back()}>
+      <TouchableOpacity
+        style={styles.closeButton}
+        onPress={() => {
+          HapticsService.light();
+          router.back();
+        }}
+      >
         <Ionicons name="close" size={28} color={colors.text} />
       </TouchableOpacity>
 
@@ -285,8 +299,8 @@ export default function PremiumScreen() {
         {/* Pricing Options */}
         {loading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.primary} />
-            <Text style={styles.loadingText}>Loading subscription options...</Text>
+            <SkeletonLoader height={120} style={{ marginBottom: spacing.md }} />
+            <SkeletonLoader height={120} />
           </View>
         ) : packages.length > 0 ? (
           <View style={styles.pricingContainer}>
@@ -303,7 +317,10 @@ export default function PremiumScreen() {
                     styles.packageCard,
                     isSelected && styles.packageCardSelected,
                   ]}
-                  onPress={() => setSelectedPackage(pkg)}
+                  onPress={() => {
+                    HapticsService.selection();
+                    setSelectedPackage(pkg);
+                  }}
                 >
                   <LinearGradient
                     colors={
@@ -360,23 +377,11 @@ export default function PremiumScreen() {
         {/* CTA Button */}
         {!loading && packages.length > 0 && (
           <TouchableOpacity
-            style={[styles.ctaButton, purchasing && styles.ctaButtonDisabled]}
             onPress={handlePurchase}
             disabled={purchasing || !selectedPackage}
+            style={[purchasing && styles.ctaButtonDisabled]}
           >
-            <LinearGradient
-              colors={[colors.primary, colors.primaryDark]}
-              style={styles.ctaButtonGradient}
-            >
-              {purchasing ? (
-                <ActivityIndicator size="small" color={colors.background} />
-              ) : (
-                <>
-                  <Text style={styles.ctaButtonText}>Upgrade to Pro</Text>
-                  <Ionicons name="arrow-forward" size={24} color={colors.background} />
-                </>
-              )}
-            </LinearGradient>
+            <ShimmerUpgradeButton text="Upgrade to Pro" icon="arrow-forward" />
           </TouchableOpacity>
         )}
 
@@ -495,12 +500,18 @@ const styles = StyleSheet.create({
   },
   featureCard: {
     width: (width - spacing.lg * 2 - spacing.md) / 2,
+    height: 160,
     backgroundColor: colors.backgroundSecondary,
     borderRadius: borderRadius.lg,
     padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderWidth: 2,
+    borderColor: `${colors.primary}22`,
     overflow: 'hidden',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
   featureIconContainer: {
     width: 56,
@@ -509,17 +520,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: spacing.md,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 3,
   },
   featureTitle: {
     fontSize: typography.fontSize.md,
     fontWeight: typography.fontWeight.bold,
     color: colors.text,
     marginBottom: spacing.xs,
+    minHeight: 20,
   },
   featureDescription: {
     fontSize: typography.fontSize.sm,
     color: colors.textSecondary,
     lineHeight: 18,
+    flex: 1,
   },
   loadingContainer: {
     paddingVertical: spacing.xxl,
