@@ -1,0 +1,44 @@
+{
+  "name": "Cryptoshield",
+  "short_name": "Cryptoshield",
+  "description": "AI-powered crypto security scanner for detecting scams, honeypots, and fraud in Telegram",
+  "icon_url": "https://your-domain.com/icon.png",
+  "background_color": "#0a0e1a",
+  "theme_color": "#00ffc8",
+  "display": "standalone",
+  "orientation": "portrait",
+  "version": "1.0.0",
+  "features": {
+    "contract_scanning": true,
+    "url_checking": true,
+    "ai_consultant": true,
+    "screenshot_analysis": true,
+    "promo_codes": true,
+    "russian_localization": true
+  },
+  "telegram": {
+    "supports_haptics": true,
+    "supports_main_button": true,
+    "supports_back_button": true,
+    "supports_popups": true,
+    "minimum_version": "6.0"
+  },
+  "security": {
+    "allows_external_links": true,
+    "requires_user_authentication": false,
+    "auto_authenticates_telegram_users": true
+  },
+  "monetization": {
+    "promo_codes_enabled": true,
+    "subscriptions_enabled": true,
+    "telegram_stars_planned": true,
+    "premium_features": [
+      "unlimited_scans",
+      "deep_screenshot_analysis",
+      "priority_ai_responses",
+      "advanced_protection",
+      "early_access",
+      "multi_device_sync"
+    ]
+  }
+}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   Image,
   Alert,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,6 +18,8 @@ import { colors, spacing, borderRadius, typography } from '@/constants/theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useImageAnalysis } from '@fastshot/ai';
 import { AnimatedIconButton, AnimatedButton, AnimatedPressable } from '@/components/AnimatedPressable';
+import { useTelegram } from '@/contexts/TelegramContext';
+import { TelegramService } from '@/services/telegram';
 
 export default function ScreenshotAnalysis() {
   const router = useRouter();
@@ -31,6 +34,10 @@ export default function ScreenshotAnalysis() {
     },
   });
 
+  // Telegram integration
+  const isInTelegram = Platform.OS === 'web' && TelegramService.isInTelegram();
+  const telegram = useTelegram();
+
   // Check Pro status on mount
   React.useEffect(() => {
     checkProStatus();
@@ -41,6 +48,23 @@ export default function ScreenshotAnalysis() {
     const proStatus = await SubscriptionService.isPro();
     setIsPro(proStatus);
   };
+
+  // Setup Telegram Back Button
+  useEffect(() => {
+    if (!isInTelegram || !telegram) return;
+
+    // Show back button
+    telegram.showBackButton(() => {
+      router.back();
+    });
+
+    return () => {
+      if (telegram) {
+        telegram.hideBackButton();
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isInTelegram]);
 
   const requestPermission = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();

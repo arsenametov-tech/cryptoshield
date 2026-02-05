@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   TextInput,
   Keyboard,
+  Platform,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
@@ -33,6 +34,8 @@ import { HapticsService } from '@/services/haptics';
 import { SkeletonLoader } from '@/components/SkeletonLoader';
 import { PromoCodeService } from '@/services/promoCode';
 import { t } from '@/services/i18n';
+import { useTelegram } from '@/contexts/TelegramContext';
+import { TelegramService } from '@/services/telegram';
 
 const { width } = Dimensions.get('window');
 
@@ -93,6 +96,10 @@ export default function PremiumScreen() {
   const [promoCode, setPromoCode] = useState('');
   const [applyingPromo, setApplyingPromo] = useState(false);
 
+  // Telegram integration
+  const isInTelegram = Platform.OS === 'web' && TelegramService.isInTelegram();
+  const telegram = useTelegram();
+
   const shimmer = useSharedValue(0);
   const pulse = useSharedValue(1);
   const badgeRotate = useSharedValue(0);
@@ -134,6 +141,33 @@ export default function PremiumScreen() {
     loadPaywall();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Setup Telegram Back Button and Main Button
+  useEffect(() => {
+    if (!isInTelegram || !telegram) return;
+
+    // Show back button
+    telegram.showBackButton(() => {
+      router.back();
+    });
+
+    // Setup main button for purchase (if not showing promo input)
+    if (!loading && products.length > 0 && selectedProduct && !showPromoInput) {
+      telegram.showMainButton(t('premium.upgradeToPro'), handlePurchase);
+    } else if (showPromoInput && promoCode.trim()) {
+      telegram.showMainButton(t('premium.applyPromo'), handleApplyPromo);
+    } else {
+      telegram.hideMainButton();
+    }
+
+    return () => {
+      if (telegram) {
+        telegram.hideBackButton();
+        telegram.hideMainButton();
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, products, selectedProduct, showPromoInput, promoCode, isInTelegram]);
 
   const loadPaywall = async () => {
     try {
@@ -384,18 +418,20 @@ export default function PremiumScreen() {
         </LinearGradient>
       </Animated.View>
 
-      {/* Close Button */}
-      <TouchableOpacity
-        style={styles.closeButton}
-        onPress={() => {
-          HapticsService.light();
-          router.back();
-        }}
-      >
-        <BlurView intensity={30} tint="dark" style={styles.closeButtonBlur}>
-          <Ionicons name="close" size={28} color={colors.text} />
-        </BlurView>
-      </TouchableOpacity>
+      {/* Close Button - Only show if not in Telegram (Telegram uses Back Button) */}
+      {!isInTelegram && (
+        <TouchableOpacity
+          style={styles.closeButton}
+          onPress={() => {
+            HapticsService.light();
+            router.back();
+          }}
+        >
+          <BlurView intensity={30} tint="dark" style={styles.closeButtonBlur}>
+            <Ionicons name="close" size={28} color={colors.text} />
+          </BlurView>
+        </TouchableOpacity>
+      )}
 
       <ScrollView
         style={styles.scrollView}
@@ -561,8 +597,8 @@ export default function PremiumScreen() {
           </View>
         )}
 
-        {/* CTA Button */}
-        {!loading && products.length > 0 && (
+        {/* CTA Button - Only show if not in Telegram (Telegram uses Main Button) */}
+        {!isInTelegram && !loading && products.length > 0 && (
           <Animated.View style={buttonAnimatedStyle}>
             <TouchableOpacity
               onPress={handlePurchase}

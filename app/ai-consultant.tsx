@@ -19,6 +19,8 @@ import { MessageSkeleton } from '@/components/SkeletonLoader';
 import { ShimmerBadge } from '@/components/ShimmerBadge';
 import { AnimatedIconButton } from '@/components/AnimatedPressable';
 import { t } from '@/services/i18n';
+import { useTelegram } from '@/contexts/TelegramContext';
+import { TelegramService } from '@/services/telegram';
 
 interface Message {
   id: string;
@@ -80,6 +82,10 @@ export default function AIConsultant() {
 
   const { generateText, isLoading } = useTextGeneration();
 
+  // Telegram integration
+  const isInTelegram = Platform.OS === 'web' && TelegramService.isInTelegram();
+  const telegram = useTelegram();
+
   // Check Pro status on mount
   useEffect(() => {
     checkProStatus();
@@ -95,6 +101,31 @@ export default function AIConsultant() {
     // Auto-scroll to bottom when new messages arrive
     scrollViewRef.current?.scrollToEnd({ animated: true });
   }, [messages]);
+
+  // Setup Telegram Back Button and Main Button
+  useEffect(() => {
+    if (!isInTelegram || !telegram) return;
+
+    // Show back button
+    telegram.showBackButton(() => {
+      router.back();
+    });
+
+    // Setup main button for sending messages
+    if (inputText.trim() && !isLoading) {
+      telegram.showMainButton(t('common.send'), handleSend);
+    } else {
+      telegram.hideMainButton();
+    }
+
+    return () => {
+      if (telegram) {
+        telegram.hideBackButton();
+        telegram.hideMainButton();
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inputText, isLoading, isInTelegram]);
 
   const handleSend = async () => {
     if (!inputText.trim() || isLoading) return;
@@ -167,14 +198,16 @@ Please provide a helpful security-focused response.`;
 
       {/* Header */}
       <View style={styles.header}>
-        <AnimatedIconButton
-          style={styles.backButton}
-          onPress={() => {
-            router.back();
-          }}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </AnimatedIconButton>
+        {!isInTelegram && (
+          <AnimatedIconButton
+            style={styles.backButton}
+            onPress={() => {
+              router.back();
+            }}
+          >
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
+          </AnimatedIconButton>
+        )}
 
         <View style={styles.headerCenter}>
           <View style={styles.aiIndicator}>

@@ -7,6 +7,7 @@ import {
   ScrollView,
   Dimensions,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -29,6 +30,8 @@ import { ShimmerBadge } from '@/components/ShimmerBadge';
 import { LabeledSkeletonLoader } from '@/components/SkeletonLoader';
 import { AnimatedPressable, AnimatedCard, AnimatedIconButton, AnimatedButton } from '@/components/AnimatedPressable';
 import { t } from '@/services/i18n';
+import { useTelegram } from '@/contexts/TelegramContext';
+import { TelegramService } from '@/services/telegram';
 
 const { width } = Dimensions.get('window');
 const RADAR_SIZE = width * 0.6;
@@ -67,6 +70,10 @@ export default function Dashboard() {
 
   const { generateText } = useTextGeneration();
 
+  // Telegram integration
+  const isInTelegram = Platform.OS === 'web' && TelegramService.isInTelegram();
+  const telegram = useTelegram();
+
   const rotation = useSharedValue(0);
   const radarScale = useSharedValue(1);
   const scanButtonPulse = useSharedValue(1);
@@ -95,6 +102,26 @@ export default function Dashboard() {
     loadSubscriptionStatus();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Setup Telegram Main Button for scanning
+  useEffect(() => {
+    if (!isInTelegram || !telegram) return;
+
+    const hasInput = contractAddress.trim() || websiteUrl.trim();
+
+    if (hasInput && !isScanning) {
+      telegram.showMainButton(t('dashboard.tapToScan'), handleScan);
+    } else {
+      telegram.hideMainButton();
+    }
+
+    return () => {
+      if (telegram) {
+        telegram.hideMainButton();
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contractAddress, websiteUrl, isScanning, isInTelegram]);
 
   const loadSubscriptionStatus = async () => {
     const { scansRemaining: remaining, isPro: proStatus } = await import('@/services/subscription').then(
@@ -320,20 +347,22 @@ export default function Dashboard() {
             </View>
           </Animated.View>
 
-          {/* Tap to Scan */}
-          <Animated.View style={scanButtonAnimatedStyle}>
-            <AnimatedButton
-              style={styles.scanButton}
-              onPress={handleScan}
-              disabled={isScanning || (!contractAddress.trim() && !websiteUrl.trim())}
-              scaleOnPress={0.94}
-              hapticType="heavy"
-            >
-              <Text style={styles.scanButtonText}>
-                {isScanning ? t('dashboard.scanning') : t('dashboard.tapToScan')}
-              </Text>
-            </AnimatedButton>
-          </Animated.View>
+          {/* Tap to Scan - Only show if not in Telegram (Telegram uses Main Button) */}
+          {!isInTelegram && (
+            <Animated.View style={scanButtonAnimatedStyle}>
+              <AnimatedButton
+                style={styles.scanButton}
+                onPress={handleScan}
+                disabled={isScanning || (!contractAddress.trim() && !websiteUrl.trim())}
+                scaleOnPress={0.94}
+                hapticType="heavy"
+              >
+                <Text style={styles.scanButtonText}>
+                  {isScanning ? t('dashboard.scanning') : t('dashboard.tapToScan')}
+                </Text>
+              </AnimatedButton>
+            </Animated.View>
+          )}
         </View>
 
         {/* Input Fields */}

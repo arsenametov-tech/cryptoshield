@@ -3,10 +3,13 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { View, ActivityIndicator, Text } from 'react-native';
+import { View, ActivityIndicator, Text, Platform } from 'react-native';
 import { colors } from '@/constants/theme';
 import { SubscriptionService } from '@/services/subscription';
 import { i18n } from '@/services/i18n';
+import { TelegramProvider } from '@/contexts/TelegramContext';
+import { TelegramService } from '@/services/telegram';
+import { TelegramAuthService } from '@/services/telegramAuth';
 
 export default function RootLayout() {
   const [isLoading, setIsLoading] = useState(true);
@@ -20,9 +23,34 @@ export default function RootLayout() {
   }, []);
 
   const initializeApp = async () => {
+    // Initialize Telegram WebApp if running in Telegram
+    if (Platform.OS === 'web' && TelegramService.isInTelegram()) {
+      TelegramService.expand();
+      TelegramService.enableClosingConfirmation();
+
+      // Initialize Telegram authentication
+      const telegramUser = await TelegramAuthService.initialize();
+
+      // Set language based on Telegram user
+      if (telegramUser?.language_code) {
+        await i18n.setLocale(telegramUser.language_code);
+      }
+
+      // For Telegram users, skip onboarding (they're already authenticated)
+      if (telegramUser) {
+        setHasCompletedOnboarding(true);
+        await AsyncStorage.setItem('@cryptoshield_onboarding_complete', 'true');
+      }
+    }
+
     // Initialize i18n
     await i18n.init();
-    await checkOnboarding();
+
+    // Only check onboarding if not in Telegram (Telegram users auto-complete onboarding)
+    if (!(Platform.OS === 'web' && TelegramService.isInTelegram())) {
+      await checkOnboarding();
+    }
+
     // Initialize RevenueCat
     await SubscriptionService.initialize();
   };
@@ -75,13 +103,15 @@ export default function RootLayout() {
   }
 
   return (
-    <SafeAreaProvider>
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="onboarding" options={{ headerShown: false }} />
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        </Stack>
-      </GestureHandlerRootView>
-    </SafeAreaProvider>
+    <TelegramProvider>
+      <SafeAreaProvider>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          </Stack>
+        </GestureHandlerRootView>
+      </SafeAreaProvider>
+    </TelegramProvider>
   );
 }
