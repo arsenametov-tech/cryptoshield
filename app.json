@@ -9,19 +9,31 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": false,
+      "bundleIdentifier": "com.cryptoshield.app"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#0a0e1a"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.cryptoshield.app"
     },
     "web": {
       "bundler": "metro",
       "output": "single",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/favicon.png",
+      "backgroundColor": "#0a0e1a",
+      "themeColor": "#00ffc8",
+      "name": "Cryptoshield - AI Crypto Security",
+      "shortName": "Cryptoshield",
+      "description": "AI-powered crypto security scanner for detecting scams, honeypots, and fraud",
+      "lang": "ru",
+      "scope": "/cryptoshield/",
+      "display": "standalone",
+      "startUrl": "/cryptoshield/",
+      "orientation": "portrait"
     },
     "plugins": [
       "expo-router",
@@ -36,8 +48,12 @@
       ]
     ],
     "experiments": {
-      "typedRoutes": true,
-      "baseUrl": ""
+      "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "29bbb5d7-cafd-4726-892d-e2b4830a3d78"
+      }
     }
   }
 }
