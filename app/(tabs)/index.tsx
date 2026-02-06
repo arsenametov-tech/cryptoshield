@@ -66,7 +66,8 @@ export default function Dashboard() {
   const [securityTip, setSecurityTip] = useState<string>('');
   const [isLoadingTip, setIsLoadingTip] = useState(false);
   const [isPro, setIsPro] = useState(false);
-  const [scansRemaining, setScansRemaining] = useState(3);
+  const [scansRemaining, setScansRemaining] = useState(7);
+  const [bonusScans, setBonusScans] = useState(0);
 
   const { generateText } = useTextGeneration();
 
@@ -124,11 +125,12 @@ export default function Dashboard() {
   }, [contractAddress, websiteUrl, isScanning, isInTelegram]);
 
   const loadSubscriptionStatus = async () => {
-    const { scansRemaining: remaining, isPro: proStatus } = await import('@/services/subscription').then(
+    const { scansRemaining: remaining, isPro: proStatus, bonusScans: bonus } = await import('@/services/subscription').then(
       m => m.SubscriptionService.canScan()
     );
     setIsPro(proStatus);
     setScansRemaining(remaining);
+    setBonusScans(bonus);
   };
 
   const loadSecurityTip = async () => {
@@ -302,9 +304,16 @@ export default function Dashboard() {
         <View style={styles.scanCounterContainer}>
           <BlurView intensity={20} tint="dark" style={styles.scanCounter}>
             <Ionicons name="scan" size={20} color={colors.primary} />
-            <Text style={styles.scanCounterText}>
-              {t('dashboard.scansRemaining', { count: scansRemaining })}
-            </Text>
+            <View style={styles.scanCounterContent}>
+              <Text style={styles.scanCounterText}>
+                {t('dashboard.scanLimit', { remaining: scansRemaining, total: 7 })}
+              </Text>
+              {bonusScans > 0 && (
+                <Text style={styles.bonusScansText}>
+                  {t('dashboard.bonusScans', { count: bonusScans })}
+                </Text>
+              )}
+            </View>
             <AnimatedPressable onPress={() => router.push('/premium')} scaleOnPress={0.94}>
               <Text style={styles.scanCounterUpgrade}>{t('common.upgrade')}</Text>
             </AnimatedPressable>
@@ -545,10 +554,18 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     gap: spacing.sm,
   },
+  scanCounterContent: {
+    flex: 1,
+  },
   scanCounterText: {
     fontSize: typography.fontSize.sm,
     color: colors.textSecondary,
-    flex: 1,
+  },
+  bonusScansText: {
+    fontSize: typography.fontSize.xs,
+    color: colors.primary,
+    fontWeight: typography.fontWeight.semibold,
+    marginTop: 2,
   },
   scanCounterUpgrade: {
     fontSize: typography.fontSize.sm,

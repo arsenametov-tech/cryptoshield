@@ -32,10 +32,12 @@ import { colors, spacing, borderRadius, typography } from '@/constants/theme';
 import { SubscriptionService } from '@/services/subscription';
 import { HapticsService } from '@/services/haptics';
 import { SkeletonLoader } from '@/components/SkeletonLoader';
-import { PromoCodeService } from '@/services/promoCode';
+import { PromoCodeService, PromoCodeType } from '@/services/promoCode';
 import { t } from '@/services/i18n';
 import { useTelegram } from '@/contexts/TelegramContext';
 import { TelegramService } from '@/services/telegram';
+import { TelegramStarsService, TELEGRAM_STARS_PRODUCTS } from '@/services/telegramStars';
+import { ConfettiAnimation } from '@/components/ConfettiAnimation';
 
 const { width } = Dimensions.get('window');
 
@@ -95,6 +97,8 @@ export default function PremiumScreen() {
   const [showPromoInput, setShowPromoInput] = useState(false);
   const [promoCode, setPromoCode] = useState('');
   const [applyingPromo, setApplyingPromo] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [purchasingWithStars, setPurchasingWithStars] = useState(false);
 
   // Telegram integration
   const isInTelegram = Platform.OS === 'web' && TelegramService.isInTelegram();
@@ -192,6 +196,56 @@ export default function PremiumScreen() {
     }
   };
 
+  const handlePurchaseWithStars = async (productId: string) => {
+    if (!TelegramStarsService.isAvailable()) {
+      Alert.alert(
+        t('common.error'),
+        'Telegram Stars payments are only available in Telegram Mini App'
+      );
+      return;
+    }
+
+    const product = TelegramStarsService.getProduct(productId);
+    if (!product) return;
+
+    HapticsService.heavy();
+    setPurchasingWithStars(true);
+
+    try {
+      const result = await TelegramStarsService.purchaseWithStars(product);
+
+      if (result.cancelled) {
+        // User cancelled - no action needed
+        return;
+      }
+
+      if (result.success) {
+        HapticsService.success();
+        setShowConfetti(true);
+
+        setTimeout(() => {
+          Alert.alert(t('premium.welcomeToPro'), t('premium.welcomeMessage'), [
+            {
+              text: t('common.continue'),
+              onPress: () => router.back(),
+            },
+          ]);
+        }, 1500);
+      } else {
+        HapticsService.error();
+        Alert.alert(
+          t('premium.purchaseFailed'),
+          result.error || t('premium.purchaseFailedMessage')
+        );
+      }
+    } catch {
+      HapticsService.error();
+      Alert.alert(t('premium.purchaseFailed'), t('premium.purchaseFailedMessage'));
+    } finally {
+      setPurchasingWithStars(false);
+    }
+  };
+
   const handlePurchase = async () => {
     if (!selectedProduct) {
       HapticsService.warning();
@@ -218,22 +272,26 @@ export default function PremiumScreen() {
 
       if (result.success && result.isPro) {
         HapticsService.success();
-        Alert.alert('Welcome to Cryptoshield Pro! 🎉', 'You now have unlimited access to all premium features.', [
-          {
-            text: 'Get Started',
-            onPress: () => router.back(),
-          },
-        ]);
+        setShowConfetti(true);
+
+        setTimeout(() => {
+          Alert.alert(t('premium.welcomeToPro'), t('premium.welcomeMessage'), [
+            {
+              text: t('common.continue'),
+              onPress: () => router.back(),
+            },
+          ]);
+        }, 1500);
       } else if (!result.success) {
         HapticsService.error();
         Alert.alert(
-          'Purchase Pending',
-          'Your purchase is being processed. This may take a few moments.'
+          t('premium.purchasePending'),
+          t('premium.purchasePendingMessage')
         );
       }
     } catch {
       HapticsService.error();
-      Alert.alert('Purchase Failed', 'There was an error processing your purchase. Please try again.');
+      Alert.alert(t('premium.purchaseFailed'), t('premium.purchaseFailedMessage'));
     } finally {
       setPurchasing(false);
     }
@@ -309,29 +367,47 @@ export default function PremiumScreen() {
     try {
       const result = await PromoCodeService.applyPromoCode(promoCode);
 
-      if (result.success) {
+      if (result.success && result.promoData) {
         // Success! Show celebration animation
         HapticsService.success();
         HapticsService.heavy();
         HapticsService.heavy();
 
         showCelebrationAnimation();
+        setShowConfetti(true);
+
+        // Determine message based on promo type
+        let message = '';
+        let title = t('premium.promoSuccess');
+
+        switch (result.promoData.type) {
+          case PromoCodeType.BONUS_SCANS:
+            message = t('premium.promoBonusScans', { count: result.promoData.value });
+            break;
+          case PromoCodeType.PRO_TRIAL:
+            message = t('premium.promoTrialActivated', { days: result.promoData.value });
+            break;
+          case PromoCodeType.LIFETIME_PRO:
+            message = t('premium.promoLifetimeActivated');
+            break;
+          default:
+            message = t('premium.promoSuccessMessage');
+        }
 
         setTimeout(() => {
-          Alert.alert(
-            t('premium.promoSuccess'),
-            t('premium.promoSuccessMessage'),
-            [
-              {
-                text: t('common.continue'),
-                onPress: () => router.back(),
-              },
-            ]
-          );
-        }, 500);
+          Alert.alert(title, message, [
+            {
+              text: t('common.continue'),
+              onPress: () => router.back(),
+            },
+          ]);
+        }, 1500);
       } else {
         HapticsService.error();
-        Alert.alert(t('common.error'), t('premium.invalidPromoCode'));
+        const errorMessage = result.message === 'This promo code has already been used'
+          ? t('premium.promoAlreadyUsed')
+          : t('premium.invalidPromoCode');
+        Alert.alert(t('common.error'), errorMessage);
       }
     } catch {
       HapticsService.error();
@@ -418,6 +494,12 @@ export default function PremiumScreen() {
         </LinearGradient>
       </Animated.View>
 
+      {/* Confetti Animation */}
+      <ConfettiAnimation
+        visible={showConfetti}
+        onComplete={() => setShowConfetti(false)}
+      />
+
       {/* Close Button - Only show if not in Telegram (Telegram uses Back Button) */}
       {!isInTelegram && (
         <TouchableOpacity
@@ -501,7 +583,73 @@ export default function PremiumScreen() {
           ))}
         </View>
 
-        {/* Pricing Options */}
+        {/* Telegram Stars Pricing (if in Telegram) */}
+        {isInTelegram && TelegramStarsService.isAvailable() && (
+          <View style={styles.pricingContainer}>
+            <Text style={styles.pricingTitle}>{t('premium.payWithStars')}</Text>
+            <Text style={styles.pricingSubtitle}>Оплата через Telegram Stars</Text>
+
+            {TELEGRAM_STARS_PRODUCTS.map((product) => {
+              const isMonthly = product.period === 'monthly';
+              return (
+                <TouchableOpacity
+                  key={product.id}
+                  style={styles.starsPackageCard}
+                  onPress={() => handlePurchaseWithStars(product.id)}
+                  disabled={purchasingWithStars}
+                  activeOpacity={0.8}
+                >
+                  <BlurView intensity={30} tint="dark" style={styles.packageBlur}>
+                    <LinearGradient
+                      colors={['rgba(255, 215, 0, 0.15)', 'rgba(255, 215, 0, 0.05)']}
+                      style={styles.packageCardGradient}
+                    >
+                      {!isMonthly && (
+                        <View style={styles.bestValueBadge}>
+                          <LinearGradient
+                            colors={['#00ff88', '#00cc66']}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                            style={styles.bestValueGradient}
+                          >
+                            <Text style={styles.bestValueText}>{t('premium.bestValue')}</Text>
+                          </LinearGradient>
+                        </View>
+                      )}
+
+                      <View style={styles.packageCardContent}>
+                        <View style={styles.packageLeft}>
+                          <Text style={styles.packageTitle}>
+                            {product.period === 'monthly' ? t('premium.monthly') : t('premium.lifetime')}
+                          </Text>
+                          <Text style={styles.packageDescription}>{product.description}</Text>
+                        </View>
+
+                        <View style={styles.packageRight}>
+                          <Text style={styles.starsPrice}>
+                            {TelegramStarsService.formatStarsAmount(product.starsAmount)}
+                          </Text>
+                          <Ionicons name="arrow-forward-circle" size={28} color="#FFD700" />
+                        </View>
+                      </View>
+                    </LinearGradient>
+                  </BlurView>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
+
+        {/* Divider if both payment methods are available */}
+        {isInTelegram && TelegramStarsService.isAvailable() && !loading && products.length > 0 && (
+          <View style={styles.dividerContainer}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>или</Text>
+            <View style={styles.dividerLine} />
+          </View>
+        )}
+
+        {/* Regular Pricing Options (Adapty/App Store) */}
         {loading ? (
           <View style={styles.loadingContainer}>
             <SkeletonLoader height={140} style={{ marginBottom: spacing.md }} />
@@ -1144,5 +1292,38 @@ const styles = StyleSheet.create({
   celebrationText: {
     fontSize: 80,
     marginTop: spacing.md,
+  },
+  pricingSubtitle: {
+    fontSize: typography.fontSize.sm,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: spacing.lg,
+    marginTop: -spacing.sm,
+  },
+  starsPackageCard: {
+    borderRadius: borderRadius.xl,
+    overflow: 'hidden',
+    marginBottom: spacing.md,
+  },
+  starsPrice: {
+    fontSize: typography.fontSize.xxl,
+    fontWeight: typography.fontWeight.bold,
+    color: '#FFD700',
+    marginBottom: spacing.xs,
+  },
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: spacing.xl,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.border,
+  },
+  dividerText: {
+    fontSize: typography.fontSize.sm,
+    color: colors.textMuted,
+    marginHorizontal: spacing.md,
   },
 });

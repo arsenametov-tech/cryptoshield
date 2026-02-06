@@ -10,7 +10,7 @@ import { PromoCodeService } from './promoCode';
 
 const SCAN_COUNT_KEY = '@cryptoshield_scan_count';
 const SCAN_RESET_TIME_KEY = '@cryptoshield_scan_reset_time';
-const FREE_SCAN_LIMIT = 3;
+const FREE_SCAN_LIMIT = 7; // Updated from 3 to 7 scans per day
 const RESET_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 export interface ScanUsage {
@@ -191,10 +191,18 @@ export const SubscriptionService = {
   },
 
   /**
-   * Increment scan count for free users
+   * Increment scan count for free users (uses bonus scans first if available)
    */
   async incrementScanCount(): Promise<void> {
     try {
+      // First try to use bonus scans
+      const bonusScans = await PromoCodeService.getBonusScans();
+      if (bonusScans > 0) {
+        await PromoCodeService.useBonusScan();
+        return; // Don't increment daily count if using bonus scan
+      }
+
+      // Otherwise use daily scan
       const usage = await this.getScanUsage();
       const newCount = usage.count + 1;
 
@@ -225,13 +233,16 @@ export const SubscriptionService = {
   },
 
   /**
-   * Check if user can scan (Pro user via Adapty or promo, or has scans remaining)
+   * Check if user can scan (Pro user via Adapty or promo, or has scans remaining, or has bonus scans)
    */
-  async canScan(): Promise<{ canScan: boolean; scansRemaining: number; isPro: boolean }> {
+  async canScan(): Promise<{ canScan: boolean; scansRemaining: number; isPro: boolean; bonusScans: number }> {
     const isPro = await this.isPro();
 
+    // Check bonus scans
+    const bonusScans = await PromoCodeService.getBonusScans();
+
     if (isPro) {
-      return { canScan: true, scansRemaining: -1, isPro: true }; // -1 means unlimited
+      return { canScan: true, scansRemaining: -1, isPro: true, bonusScans }; // -1 means unlimited
     }
 
     const usage = await this.getScanUsage();
@@ -239,13 +250,13 @@ export const SubscriptionService = {
     // Reset if time has passed
     if (Date.now() >= usage.resetTime) {
       await this.resetScanCount();
-      return { canScan: true, scansRemaining: FREE_SCAN_LIMIT - 1, isPro: false };
+      return { canScan: true, scansRemaining: FREE_SCAN_LIMIT - 1, isPro: false, bonusScans };
     }
 
-    const scansRemaining = Math.max(0, FREE_SCAN_LIMIT - usage.count);
-    const canScan = scansRemaining > 0;
+    const dailyScansRemaining = Math.max(0, FREE_SCAN_LIMIT - usage.count);
+    const canScan = dailyScansRemaining > 0 || bonusScans > 0;
 
-    return { canScan, scansRemaining, isPro: false };
+    return { canScan, scansRemaining: dailyScansRemaining, isPro: false, bonusScans };
   },
 
   /**

@@ -11,6 +11,8 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 import { colors, spacing, borderRadius, typography } from '@/constants/theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTextGeneration } from '@fastshot/ai';
@@ -79,6 +81,8 @@ export default function AIConsultant() {
   ]);
   const [inputText, setInputText] = useState('');
   const [isPro, setIsPro] = useState(false);
+  const [scansRemaining, setScansRemaining] = useState(7);
+  const [shouldShowScanHint, setShouldShowScanHint] = useState(false);
 
   const { generateText, isLoading } = useTextGeneration();
 
@@ -94,7 +98,14 @@ export default function AIConsultant() {
   const checkProStatus = async () => {
     const { SubscriptionService } = await import('@/services/subscription');
     const proStatus = await SubscriptionService.isPro();
+    const { scansRemaining: remaining } = await SubscriptionService.canScan();
     setIsPro(proStatus);
+    setScansRemaining(remaining);
+
+    // Show scan hint if user is not Pro and has 2 or fewer scans remaining
+    if (!proStatus && remaining <= 2 && remaining >= 0) {
+      setShouldShowScanHint(true);
+    }
   };
 
   useEffect(() => {
@@ -150,7 +161,13 @@ export default function AIConsultant() {
         .map((msg) => `${msg.isUser ? 'User' : 'Assistant'}: ${msg.text}`)
         .join('\n\n');
 
-      const fullPrompt = `${isPro ? PRO_SYSTEM_PROMPT : SYSTEM_PROMPT}
+      // Add context about scans if user is low on scans and not Pro
+      let additionalContext = '';
+      if (!isPro && scansRemaining <= 2 && scansRemaining >= 0) {
+        additionalContext = `\n\nКонтекстная информация: У пользователя осталось только ${scansRemaining} проверок на сегодня. Если это уместно в контексте беседы, тактично упомяните о преимуществах Pro подписки (безлимитные проверки) или возможности использовать промокоды для дополнительных проверок. Не будьте навязчивы - упоминайте это только если это естественно вписывается в контекст разговора.`;
+      }
+
+      const fullPrompt = `${isPro ? PRO_SYSTEM_PROMPT : SYSTEM_PROMPT}${additionalContext}
 
 Conversation history:
 ${conversationHistory}
@@ -267,6 +284,23 @@ Please provide a helpful security-focused response.`;
         ))}
 
         {isLoading && <MessageSkeleton />}
+
+        {/* Low scans hint banner */}
+        {shouldShowScanHint && !isPro && scansRemaining <= 2 && (
+          <View style={styles.hintBanner}>
+            <BlurView intensity={30} tint="dark" style={styles.hintBlur}>
+              <LinearGradient
+                colors={['rgba(147, 51, 234, 0.1)', 'rgba(79, 70, 229, 0.1)']}
+                style={styles.hintGradient}
+              >
+                <Ionicons name="information-circle" size={20} color={colors.primary} />
+                <Text style={styles.hintText}>
+                  {t('aiConsultant.lowScansHint')}
+                </Text>
+              </LinearGradient>
+            </BlurView>
+          </View>
+        )}
       </ScrollView>
 
       {/* Input */}
@@ -446,5 +480,30 @@ const styles = StyleSheet.create({
   },
   sendButtonDisabled: {
     backgroundColor: colors.surface,
+  },
+  hintBanner: {
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.md,
+    borderRadius: borderRadius.md,
+    overflow: 'hidden',
+  },
+  hintBlur: {
+    borderRadius: borderRadius.md,
+    overflow: 'hidden',
+  },
+  hintGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    borderWidth: 1,
+    borderColor: `${colors.primary}33`,
+  },
+  hintText: {
+    flex: 1,
+    fontSize: typography.fontSize.sm,
+    color: colors.textSecondary,
+    lineHeight: 18,
   },
 });
